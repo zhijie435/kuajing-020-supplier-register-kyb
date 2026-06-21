@@ -25,6 +25,22 @@ require_view_permission($detail['id']);
 
 $detail = format_kyb_record($detail);
 
+$uploadCount = 0;
+$totalUploadCount = 3;
+if (!empty($detail['business_license'])) $uploadCount++;
+if (!empty($detail['legal_person_id_front'])) $uploadCount++;
+if (!empty($detail['legal_person_id_back'])) $uploadCount++;
+if (!empty($detail['organization_code_cert'])) { $uploadCount++; $totalUploadCount++; }
+if (!empty($detail['tax_registration_cert'])) { $uploadCount++; $totalUploadCount++; }
+if (!empty($detail['other_certificates']) && is_array($detail['other_certificates'])) {
+    $otherCount = count($detail['other_certificates']);
+    $uploadCount += $otherCount;
+    $totalUploadCount += $otherCount;
+}
+$detail['upload_count'] = $uploadCount;
+$detail['total_upload_count'] = $totalUploadCount;
+$detail['upload_progress'] = $totalUploadCount > 0 ? round($uploadCount / $totalUploadCount * 100) : 0;
+
 $user = get_current_user();
 $detail['can_view'] = can_view_supplier_kyb($detail['id']);
 $detail['can_edit'] = can_edit_supplier_kyb($detail['id'], $detail['status']);
