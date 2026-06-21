@@ -393,6 +393,22 @@
                     <button class="btn-submit" @click="resetForm">继续提交</button>
                 </div>
             </div>
+
+            <div v-if="submitFailed" class="error-modal">
+                <div class="error-content">
+                    <div class="error-icon">!</div>
+                    <h2>提交失败</h2>
+                    <p class="error-detail">{{ submitFailedMessage }}</p>
+                    <p class="error-notice">数据已自动回滚，不会产生脏数据，您可以修改后重试。</p>
+                    <div class="error-actions">
+                        <button class="btn-prev" @click="closeFailedModal">返回修改</button>
+                        <button class="btn-submit" @click="retrySubmit" :disabled="submitting">
+                            <span v-if="submitting">提交中...</span>
+                            <span v-else>立即重试</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -142,12 +142,12 @@ try {
         json_response(200, $isNew ? '注册提交成功，请等待审核' : '资料已更新，重新进入审核队列', $record);
     } else {
         $pdo->rollBack();
-        json_response(500, '注册提交失败');
+        json_response(500, '注册提交失败，数据已自动回滚，请重试');
     }
     
 } catch (PDOException $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    json_response(500, '服务器错误: ' . $e->getMessage());
+    json_response(500, '服务器错误，数据已自动回滚: ' . $e->getMessage());
 }
