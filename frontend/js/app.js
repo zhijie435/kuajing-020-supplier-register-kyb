@@ -9,6 +9,8 @@ createApp({
         const submitSuccess = ref(false);
         const agreed = ref(false);
         const errors = reactive({});
+        const uploadErrors = reactive({});
+        const globalError = ref('');
 
         const businessLicenseInput = ref(null);
         const idFrontInput = ref(null);
@@ -95,27 +97,55 @@ createApp({
         }
 
         function validateStep2() {
+            let valid = true;
+            Object.keys(uploadErrors).forEach(key => delete uploadErrors[key]);
+            globalError.value = '';
+
             if (!form.business_license) {
-                alert('请上传营业执照');
-                return false;
+                uploadErrors.business_license = '请上传营业执照';
+                valid = false;
             }
             if (!form.legal_person_id_front) {
-                alert('请上传法人身份证正面');
-                return false;
+                uploadErrors.legal_person_id_front = '请上传法人身份证正面';
+                valid = false;
             }
             if (!form.legal_person_id_back) {
-                alert('请上传法人身份证反面');
-                return false;
+                uploadErrors.legal_person_id_back = '请上传法人身份证反面';
+                valid = false;
             }
-            return true;
+
+            form.other_certificates.forEach((cert, index) => {
+                if (cert.name && !cert.url) {
+                    uploadErrors['other_' + index] = '请上传"' + (cert.name || '证照' + (index + 1)) + '"的文件';
+                    valid = false;
+                }
+            });
+
+            return valid;
         }
 
         function nextStep() {
-            if (currentStep.value === 1 && !validateStep1()) return;
-            if (currentStep.value === 2 && !validateStep2()) return;
+            globalError.value = '';
+            if (currentStep.value === 1 && !validateStep1()) {
+                scrollToError();
+                return;
+            }
+            if (currentStep.value === 2 && !validateStep2()) {
+                scrollToError();
+                return;
+            }
             if (currentStep.value < 3) {
                 currentStep.value++;
             }
+        }
+
+        function scrollToError() {
+            nextTick(() => {
+                const firstError = document.querySelector('.error-tip, .upload-error-tip, .global-error');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
         }
 
         function prevStep() {

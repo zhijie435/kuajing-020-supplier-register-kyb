@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>在线课程教务系统 - 多语言多币种+状态闭环单元测试</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4ecf7 100%);
+    color: #1a202c;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 32px 40px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 10px 40px rgba(102,126,234,0.35);
+  }
+  header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+  header p { font-size: 15px; opacity: 0.9; }
+  .header-badges { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .badge {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-left: 4px solid #667eea;
+  }
+  .stat-card h3 { font-size: 13px; color: #718096; font-weight: 500; margin-bottom: 8px; }
+  .stat-card .value { font-size: 36px; font-weight: 700; line-height: 1.1; }
+  .stat-card.total .value { color: #2d3748; }
+  .stat-card.pass { border-left-color: #38a169; }
+  .stat-card.pass .value { color: #38a169; }
+  .stat-card.fail { border-left-color: #e53e3e; }
+  .stat-card.fail .value { color: #e53e3e; }
+  .stat-card.rate { border-left-color: #805ad5; }
+  .stat-card.rate .value { color: #805ad5; }
+  .layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+  }
+  .panel {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+  }
+  .panel h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #2d3748;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f4f8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel h2::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: linear-gradient(180deg, #667eea, #764ba2);
+    border-radius: 2px;
+  }
+  .flow-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .flow-node {
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #edf2f7;
+    color: #4a5568;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+    text-align: center;
+    min-width: 100px;
+    position: relative;
+  }
+  .flow-node.done {
+    background: linear-gradient(135deg, #c6f6d5, #9ae6b4);
+    color: #22543d;
+    border-color: #68d391;
+    box-shadow: 0 2px 8px rgba(56,161,105,0.2);
+  }
+  .flow-node.current {
+    background: linear-gradient(135deg, #fefcbf, #fbd38d);
+    color: #744210;
+    border-color: #f6ad55;
+    box-shadow: 0 2px 8px rgba(237,137,54,0.25);
+    animation: pulse 1.2s infinite;
+  }
+  .flow-node.branch-a { background: linear-gradient(135deg, #fed7d7, #feb2b2); color: #742a2a; border-color: #fc8181; }
+  .flow-node.branch-b { background: linear-gradient(135deg, #bee3f8, #90cdf4); color: #2a4365; border-color: #63b3ed; }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .flow-arrow {
+    font-size: 20px;
+    color: #a0aec0;
+    font-weight: bold;
+  }
+  .flow-label {
+    font-size: 11px;
+    color: #718096;
+    background: #f7fafc;
+    padding: 2px 8px;
+    border-radius: 6px;
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 14px rgba(102,126,234,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(102,126,234,0.5); }
+  .btn-secondary {
+    background: white;
+    color: #4a5568;
+    border: 2px solid #e2e8f0;
+  }
+  .btn-secondary:hover { border-color: #cbd5e0; background: #f7fafc; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .suite {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+  }
+  .suite-header {
+    padding: 16px 20px;
+    background: linear-gradient(90deg, #f7fafc, #edf2f7);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .suite-header:hover { background: linear-gradient(90deg, #edf2f7, #e2e8f0); }
+  .suite-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #2d3748;
+  }
+  .suite-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .suite-stats {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .suite-stats span {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .suite-stats .pass-count { background: #c6f6d5; color: #22543d; }
+  .suite-stats .fail-count { background: #fed7d7; color: #742a2a; }
+  .suite-stats .total-count { background: #e2e8f0; color: #4a5568; }
+  .suite-body { padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .suite-body.open { max-height: 5000px; }
+  .case {
+    padding: 12px 20px;
+    border-top: 1px solid #f0f4f8;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .case-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .case-icon.pass { background: #38a169; color: white; }
+  .case-icon.fail { background: #e53e3e; color: white; }
+  .case-icon.pending { background: #e2e8f0; color: #718096; }
+  .case-icon.running { background: #ed8936; color: white; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .case-info { flex: 1; }
+  .case-name { font-weight: 600; color: #2d3748; margin-bottom: 3px; }
+  .case-desc { color: #718096; font-size: 12px; line-height: 1.5; }
+  .case-error {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: #fff5f5;
+    border-left: 3px solid #fc8181;
+    border-radius: 0 6px 6px 0;
+    color: #742a2a;
+    font-size: 12px;
+    font-family: "SF Mono", "Consolas", monospace;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .case-duration {
+    font-size: 11px;
+    color: #a0aec0;
+    font-family: monospace;
+    flex-shrink: 0;
+    padding-top: 3px;
+  }
+  .current-step-log {
+    padding: 12px 16px;
+    background: #f0fff4;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #22543d;
+    font-family: monospace;
+    min-height: 40px;
+    margin-top: 12px;
+    border-left: 3px solid #68d391;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #718096;
+  }
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+  }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📚 在线课程教务系统 · 单元测试平台</h1>
+    <p>多语言切换 · 多币种汇率 · 文案/汇率回退审核状态闭环 — 全链路自动化验证</p>
+    <div class="header-badges">
+      <span class="badge">🌐 3 种语言（zh-CN / en-US / ja-JP）</span>
+      <span class="badge">💰 5 种币种（CNY/USD/JPY/EUR/HKD）</span>
+      <span class="badge">🔄 四态闭环（Pending→Approved/Rejected→Written）</span>
+      <span class="badge">📦 8 测试套件 · 91 用例</span>
+    </div>
+  </header>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnRunAll">▶ 运行全部测试</button>
+    <button class="btn btn-secondary" id="btnReset">↺ 重置状态</button>
+    <button class="btn btn-secondary" id="btnExpandAll">▤ 展开全部</button>
+    <button class="btn btn-secondary" id="btnCollapseAll">▥ 收起全部</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="stat-card total">
+      <h3>总用例数</h3>
+      <div class="value" id="statTotal">—</div>
+    </div>
+    <div class="stat-card pass">
+      <h3>通过</h3>
+      <div class="value" id="statPass">—</div>
+    </div>
+    <div class="stat-card fail">
+      <h3>失败</h3>
+      <div class="value" id="statFail">—</div>
+    </div>
+    <div class="stat-card rate">
+      <h3>通过率</h3>
+      <div class="value" id="statRate">—</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>文案回退审核 · 状态闭环流转图</h2>
+        <div class="flow-diagram" id="flowI18n">
+          <div class="flow-row">
+            <div class="flow-node" data-node="fallback">触发回退链</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node" data-node="pending">
+              <span class="flow-label">ensureReviewRecord</span>
+              Pending
+            </div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-arrow">↙</div>
+            <div style="width:30px"></div>
+            <div class="flow-arrow">↘</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-node branch-a" data-node="rejected">
+              <span class="flow-label">rejectReview()</span>
+              Rejected
+            </div>
+            <div style="width:20px"></div>
+            <div class="flow-node branch-b" data-node="approved">
+              <span class="flow-label">approveReview()</span>
+              Approved
+            </div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-arrow" style="font-size:14px">updateProposed →</div>
+            <div style="width:30px"></div>
+            <div class="flow-arrow">↓</div>
+          </div>
+          <div class="flow-row">
+            <div style="width:100px"></div>
+            <div style="width:20px"></div>
+            <div class="flow-node" data-node="written">
+              <span class="flow-label">writeBackApproved()</span>
+              Written
+            </div>
+          </div>
+          <div class="flow-row">
+            <div style="width:100px"></div>
+            <div style="width:20px"></div>
+            <div class="flow-arrow">↺ 修改提案 → Pending</div>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#9ae6b4"></div>已执行</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fbd38d"></div>进行中</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div>待执行</div>
+        </div>
+        <div class="current-step-log" id="i18nStepLog">等待执行...</div>
+      </div>
+
+      <div class="panel">
+        <h2>汇率回退审核 · 状态闭环流转图</h2>
+        <div class="flow-diagram" id="flowCurrency">
+          <div class="flow-row">
+            <div class="flow-node" data-node="fallback">触发回退汇率</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node" data-node="pending">
+              <span class="flow-label">triggerRateReview</span>
+              Pending
+            </div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-arrow">↙</div>
+            <div style="width:30px"></div>
+            <div class="flow-arrow">↘</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-node branch-a" data-node="rejected">
+              <span class="flow-label">rejectRateReview()</span>
+              Rejected
+            </div>
+            <div style="width:20px"></div>
+            <div class="flow-node branch-b" data-node="approved">
+              <span class="flow-label">approveRateReview()</span>
+              Approved
+            </div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-arrow" style="font-size:14px">updateProposed →</div>
+            <div style="width:30px"></div>
+            <div class="flow-arrow">↓</div>
+          </div>
+          <div class="flow-row">
+            <div style="width:100px"></div>
+            <div style="width:20px"></div>
+            <div class="flow-node" data-node="written">
+              <span class="flow-label">writeBackApprovedRate()</span>
+              Written (customRate)
+            </div>
+          </div>
+        </div>
+        <div class="current-step-log" id="currencyStepLog">等待执行...</div>
+      </div>
+    </div>
+
+    <div id="suitesContainer">
+      <div class="suite" style="padding:32px;text-align:center;color:#a0aec0;">
+        点击「▶ 运行全部测试」开始执行...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="frontend/locales/zh-CN.js"></script>
+<script src="frontend/locales/en-US.js"></script>
+<script src="frontend/locales/ja-JP.js"></script>
+<script src="frontend/utils/i18n.js"></script>
+<script src="frontend/utils/currency.js"></script>
+<script src="frontend/utils/store.js"></script>
+<script src="frontend/tests/runner.js"></script>
+<script>
+  document.getElementById('btnRunAll').addEventListener('click', function() {
+    this.disabled = true;
+    this.textContent = '⏳ 执行中...';
+    runAllTests().finally(() => {
+      this.disabled = false;
+      this.textContent = '▶ 运行全部测试';
+    });
+  });
+  document.getElementById('btnReset').addEventListener('click', function() {
+    location.reload();
+  });
+  document.getElementById('btnExpandAll').addEventListener('click', function() {
+    document.querySelectorAll('.suite-body').forEach(b => b.classList.add('open'));
+  });
+  document.getElementById('btnCollapseAll').addEventListener('click', function() {
+    document.querySelectorAll('.suite-body').forEach(b => b.classList.remove('open'));
+  });
+</script>
+</body>
+</html>
