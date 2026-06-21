@@ -33,6 +33,14 @@
             </div>
 
             <form @submit.prevent="handleSubmit" class="form-card">
+                <div v-if="globalError" class="global-error">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>{{ globalError }}</span>
+                </div>
                 <div v-show="currentStep === 1" class="form-step">
                     <h2 class="section-title">企业基本信息</h2>
                     
@@ -172,6 +180,7 @@
                                 </div>
                             </div>
                             <input type="file" :ref="el => businessLicenseInput = el" @change="handleFileUpload($event, 'business_license')" accept="image/*,.pdf" style="display:none">
+                            <span v-if="uploadErrors.business_license" class="upload-error-tip">{{ uploadErrors.business_license }}</span>
                         </div>
 
                         <div class="upload-item">
@@ -201,6 +210,7 @@
                                 </div>
                             </div>
                             <input type="file" :ref="el => idFrontInput = el" @change="handleFileUpload($event, 'legal_person_id_front')" accept="image/*,.pdf" style="display:none">
+                            <span v-if="uploadErrors.legal_person_id_front" class="upload-error-tip">{{ uploadErrors.legal_person_id_front }}</span>
                         </div>
 
                         <div class="upload-item">
@@ -230,6 +240,7 @@
                                 </div>
                             </div>
                             <input type="file" :ref="el => idBackInput = el" @change="handleFileUpload($event, 'legal_person_id_back')" accept="image/*,.pdf" style="display:none">
+                            <span v-if="uploadErrors.legal_person_id_back" class="upload-error-tip">{{ uploadErrors.legal_person_id_back }}</span>
                         </div>
                     </div>
 
@@ -241,6 +252,7 @@
                             <div class="other-upload-info">
                                 <input type="text" v-model="cert.name" placeholder="证照名称" class="cert-name-input">
                                 <span class="cert-file-name">{{ cert.original_name || '未选择文件' }}</span>
+                                <span v-if="uploadErrors['other_' + index]" class="upload-error-tip">{{ uploadErrors['other_' + index] }}</span>
                             </div>
                             <div class="other-upload-actions">
                                 <button type="button" class="btn-sm" @click="triggerOtherUpload(index)">选择文件</button>

@@ -191,22 +191,26 @@ createApp({
             const file = event.target.files[0];
             if (!file) return;
 
+            globalError.value = '';
+            delete uploadErrors[field];
+
             if (file.size > 10 * 1024 * 1024) {
-                alert('文件大小不能超过 10MB');
+                uploadErrors[field] = '文件大小不能超过 10MB';
                 return;
             }
 
             const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
             if (!allowedTypes.includes(file.type)) {
-                alert('仅支持 JPG、PNG、GIF、PDF 格式');
+                uploadErrors[field] = '仅支持 JPG、PNG、GIF、PDF 格式';
                 return;
             }
 
             const result = await uploadFile(file, field);
             if (result.success) {
                 form[field] = result.url;
+                delete uploadErrors[field];
             } else {
-                alert(result.message || '上传失败');
+                uploadErrors[field] = result.message || '上传失败，请重试';
             }
 
             event.target.value = '';
@@ -240,8 +244,12 @@ createApp({
             const file = event.target.files[0];
             if (!file) return;
 
+            globalError.value = '';
+            const errorKey = 'other_' + index;
+            delete uploadErrors[errorKey];
+
             if (file.size > 10 * 1024 * 1024) {
-                alert('文件大小不能超过 10MB');
+                uploadErrors[errorKey] = '文件大小不能超过 10MB';
                 return;
             }
 
@@ -249,16 +257,19 @@ createApp({
             if (result.success) {
                 form.other_certificates[index].url = result.url;
                 form.other_certificates[index].original_name = file.name;
+                delete uploadErrors[errorKey];
             } else {
-                alert(result.message || '上传失败');
+                uploadErrors[errorKey] = result.message || '上传失败，请重试';
             }
 
             event.target.value = '';
         }
 
         async function handleSubmit() {
+            globalError.value = '';
             if (!agreed.value) {
-                alert('请先阅读并同意相关协议');
+                globalError.value = '请先阅读并同意相关协议';
+                scrollToError();
                 return;
             }
 
@@ -287,15 +298,31 @@ createApp({
 
                 if (result.code === 200) {
                     submitSuccess.value = true;
+                    try {
+                        localStorage.setItem('lastKybId', result.data.id);
+                    } catch (e) {}
                 } else {
-                    alert(result.message || '提交失败');
-                    if (result.code === 400 && result.message.includes('统一社会信用代码')) {
-                        currentStep.value = 1;
+                    globalError.value = result.message || '提交失败，请检查输入后重试';
+                    if (result.code === 400) {
+                        if (result.message && result.message.includes('统一社会信用代码')) {
+                            errors.unified_social_credit_code = result.message;
+                            currentStep.value = 1;
+                        }
+                        if (result.message && result.message.includes('联系电话')) {
+                            errors.contact_phone = result.message;
+                            currentStep.value = 1;
+                        }
+                        if (result.message && result.message.includes('邮箱')) {
+                            errors.contact_email = result.message;
+                            currentStep.value = 1;
+                        }
                     }
+                    scrollToError();
                 }
             } catch (error) {
                 console.error('提交失败:', error);
-                alert('提交失败，请稍后重试。\n\n注意：需部署 PHP 环境后才能正常提交。');
+                globalError.value = '提交失败，请稍后重试。\n注意：需部署 PHP + MySQL 环境后才能正常提交到数据库。';
+                scrollToError();
             } finally {
                 submitting.value = false;
             }
@@ -305,6 +332,7 @@ createApp({
             submitSuccess.value = false;
             currentStep.value = 1;
             agreed.value = false;
+            globalError.value = '';
             Object.keys(form).forEach(key => {
                 if (key === 'other_certificates') {
                     form[key] = [];
@@ -313,12 +341,15 @@ createApp({
                 }
             });
             Object.keys(errors).forEach(key => delete errors[key]);
+            Object.keys(uploadErrors).forEach(key => delete uploadErrors[key]);
         }
 
         return {
             currentStep,
             form,
             errors,
+            uploadErrors,
+            globalError,
             provinces,
             cities,
             fullAddress,
