@@ -7,6 +7,8 @@ createApp({
         const currentStep = ref(1);
         const submitting = ref(false);
         const submitSuccess = ref(false);
+        const submitFailed = ref(false);
+        const submitFailedMessage = ref('');
         const agreed = ref(false);
         const errors = reactive({});
         const uploadErrors = reactive({});
@@ -302,6 +304,7 @@ createApp({
 
                 if (result.code === 200) {
                     submitSuccess.value = true;
+                    submitFailed.value = false;
                     try {
                         sessionStorage.setItem('lastKybId', result.data.id);
                         sessionStorage.setItem('justSavedKyb', '1');
@@ -314,6 +317,8 @@ createApp({
                     }
                 } else {
                     globalError.value = result.message || '提交失败，请检查输入后重试';
+                    submitFailedMessage.value = result.message || '提交失败，请检查输入后重试';
+                    submitFailed.value = true;
                     if (result.code === 400) {
                         if (result.message && result.message.includes('统一社会信用代码')) {
                             errors.unified_social_credit_code = result.message;
@@ -332,7 +337,10 @@ createApp({
                 }
             } catch (error) {
                 console.error('提交失败:', error);
-                globalError.value = '提交失败，请稍后重试。\n注意：需部署 PHP + MySQL 环境后才能正常提交到数据库。';
+                const errMsg = '提交失败，请稍后重试。\n注意：需部署 PHP + MySQL 环境后才能正常提交到数据库。';
+                globalError.value = errMsg;
+                submitFailedMessage.value = errMsg;
+                submitFailed.value = true;
                 scrollToError();
             } finally {
                 submitting.value = false;
@@ -341,6 +349,8 @@ createApp({
 
         function resetForm() {
             submitSuccess.value = false;
+            submitFailed.value = false;
+            submitFailedMessage.value = '';
             currentStep.value = 1;
             agreed.value = false;
             globalError.value = '';
@@ -355,6 +365,15 @@ createApp({
             Object.keys(uploadErrors).forEach(key => delete uploadErrors[key]);
         }
 
+        function closeFailedModal() {
+            submitFailed.value = false;
+        }
+
+        function retrySubmit() {
+            submitFailed.value = false;
+            handleSubmit();
+        }
+
         return {
             currentStep,
             form,
@@ -366,6 +385,8 @@ createApp({
             fullAddress,
             submitting,
             submitSuccess,
+            submitFailed,
+            submitFailedMessage,
             agreed,
             businessLicenseInput,
             idFrontInput,
@@ -381,7 +402,9 @@ createApp({
             triggerOtherUpload,
             handleOtherFileUpload,
             handleSubmit,
-            resetForm
+            resetForm,
+            closeFailedModal,
+            retrySubmit
         };
     }
 }).mount('#app');
