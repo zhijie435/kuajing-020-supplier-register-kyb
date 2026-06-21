@@ -183,3 +183,8 @@ window.LOCALE_JA_JP = {
     loading_more: '読み込み中...',
     load_failed: '読み込み失敗',
     retry: '再試行',
+    total: '合計',
+    items: '件',
+    page: 'ページ',
+  },
+};

@@ -10,6 +10,10 @@ createApp({
         const agreed = ref(false);
         const errors = reactive({});
 
+        const businessLicenseInput = ref(null);
+        const idFrontInput = ref(null);
+        const idBackInput = ref(null);
+
         const form = reactive({
             company_name: '',
             unified_social_credit_code: '',
@@ -91,27 +95,24 @@ createApp({
         }
 
         function validateStep2() {
-            let valid = true;
             if (!form.business_license) {
                 alert('请上传营业执照');
-                valid = false;
-            } else if (!form.legal_person_id_front) {
-                alert('请上传法人身份证正面');
-                valid = false;
-            } else if (!form.legal_person_id_back) {
-                alert('请上传法人身份证反面');
-                valid = false;
+                return false;
             }
-            return valid;
+            if (!form.legal_person_id_front) {
+                alert('请上传法人身份证正面');
+                return false;
+            }
+            if (!form.legal_person_id_back) {
+                alert('请上传法人身份证反面');
+                return false;
+            }
+            return true;
         }
 
         function nextStep() {
-            if (currentStep.value === 1) {
-                if (!validateStep1()) return;
-            }
-            if (currentStep.value === 2) {
-                if (!validateStep2()) return;
-            }
+            if (currentStep.value === 1 && !validateStep1()) return;
+            if (currentStep.value === 2 && !validateStep2()) return;
             if (currentStep.value < 3) {
                 currentStep.value++;
             }
@@ -123,15 +124,37 @@ createApp({
             }
         }
 
-        function triggerUpload(refName) {
-            nextTick(() => {
-                document.querySelector(`input[ref="${refName}"]`)?.click();
-            });
+        function triggerUpload(inputRef) {
+            if (inputRef && inputRef.value) {
+                inputRef.value.click();
+            }
         }
 
         function isImage(url) {
             if (!url) return false;
             return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(url);
+        }
+
+        async function uploadFile(file, type) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+
+            try {
+                const response = await fetch(`${API_BASE}/upload.php`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.code === 200) {
+                    return { success: true, url: result.data.url };
+                } else {
+                    return { success: false, message: result.message };
+                }
+            } catch (error) {
+                console.warn('上传接口调用失败，使用本地预览:', error);
+                return { success: true, url: URL.createObjectURL(file), local: true };
+            }
         }
 
         async function handleFileUpload(event, field) {
@@ -149,25 +172,11 @@ createApp({
                 return;
             }
 
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('type', field);
-
-                const response = await fetch(`${API_BASE}/upload.php`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-                if (result.code === 200) {
-                    form[field] = result.data.url;
-                } else {
-                    alert(result.message || '上传失败');
-                }
-            } catch (error) {
-                console.error('上传失败:', error);
-                form[field] = URL.createObjectURL(file);
+            const result = await uploadFile(file, field);
+            if (result.success) {
+                form[field] = result.url;
+            } else {
+                alert(result.message || '上传失败');
             }
 
             event.target.value = '';
@@ -181,7 +190,8 @@ createApp({
             form.other_certificates.push({
                 name: '',
                 url: '',
-                original_name: ''
+                original_name: '',
+                file: null
             });
         }
 
@@ -190,8 +200,10 @@ createApp({
         }
 
         function triggerOtherUpload(index) {
-            const input = document.querySelectorAll('.other-upload-actions input[type="file"]')[index];
-            if (input) input.click();
+            const inputs = document.querySelectorAll('.other-cert-input');
+            if (inputs[index]) {
+                inputs[index].click();
+            }
         }
 
         async function handleOtherFileUpload(event, index) {
@@ -203,27 +215,12 @@ createApp({
                 return;
             }
 
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('type', 'other_' + index);
-
-                const response = await fetch(`${API_BASE}/upload.php`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-                if (result.code === 200) {
-                    form.other_certificates[index].url = result.data.url;
-                    form.other_certificates[index].original_name = file.name;
-                } else {
-                    alert(result.message || '上传失败');
-                }
-            } catch (error) {
-                console.error('上传失败:', error);
-                form.other_certificates[index].url = URL.createObjectURL(file);
+            const result = await uploadFile(file, 'other_' + index);
+            if (result.success) {
+                form.other_certificates[index].url = result.url;
                 form.other_certificates[index].original_name = file.name;
+            } else {
+                alert(result.message || '上传失败');
             }
 
             event.target.value = '';
@@ -240,7 +237,12 @@ createApp({
             try {
                 const submitData = {
                     ...form,
-                    unified_social_credit_code: form.unified_social_credit_code.toUpperCase()
+                    unified_social_credit_code: form.unified_social_credit_code.toUpperCase(),
+                    other_certificates: form.other_certificates.map(c => ({
+                        name: c.name,
+                        url: c.url,
+                        original_name: c.original_name
+                    }))
                 };
 
                 const response = await fetch(`${API_BASE}/register.php`, {
@@ -263,7 +265,7 @@ createApp({
                 }
             } catch (error) {
                 console.error('提交失败:', error);
-                alert('提交失败，请稍后重试');
+                alert('提交失败，请稍后重试。\n\n注意：需部署 PHP 环境后才能正常提交。');
             } finally {
                 submitting.value = false;
             }
@@ -293,6 +295,9 @@ createApp({
             submitting,
             submitSuccess,
             agreed,
+            businessLicenseInput,
+            idFrontInput,
+            idBackInput,
             nextStep,
             prevStep,
             triggerUpload,

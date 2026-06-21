@@ -150,7 +150,7 @@
                                 <span class="upload-title">营业执照 <span class="required">*</span></span>
                                 <span class="upload-desc">请上传清晰的营业执照正本</span>
                             </div>
-                            <div class="upload-area" :class="{ 'has-file': form.business_license }" @click="triggerUpload('businessLicenseInput')">
+                            <div class="upload-area" :class="{ 'has-file': form.business_license }" @click="triggerUpload(businessLicenseInput)">
                                 <div v-if="!form.business_license" class="upload-placeholder">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -171,7 +171,7 @@
                                     <button type="button" class="remove-btn" @click.stop="removeFile('business_license')">×</button>
                                 </div>
                             </div>
-                            <input type="file" ref="businessLicenseInput" @change="handleFileUpload($event, 'business_license')" accept="image/*,.pdf" style="display:none">
+                            <input type="file" :ref="el => businessLicenseInput = el" @change="handleFileUpload($event, 'business_license')" accept="image/*,.pdf" style="display:none">
                         </div>
 
                         <div class="upload-item">
@@ -179,7 +179,7 @@
                                 <span class="upload-title">法人身份证正面 <span class="required">*</span></span>
                                 <span class="upload-desc">身份证人像面</span>
                             </div>
-                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_front }" @click="triggerUpload('idFrontInput')">
+                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_front }" @click="triggerUpload(idFrontInput)">
                                 <div v-if="!form.legal_person_id_front" class="upload-placeholder">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -200,7 +200,7 @@
                                     <button type="button" class="remove-btn" @click.stop="removeFile('legal_person_id_front')">×</button>
                                 </div>
                             </div>
-                            <input type="file" ref="idFrontInput" @change="handleFileUpload($event, 'legal_person_id_front')" accept="image/*,.pdf" style="display:none">
+                            <input type="file" :ref="el => idFrontInput = el" @change="handleFileUpload($event, 'legal_person_id_front')" accept="image/*,.pdf" style="display:none">
                         </div>
 
                         <div class="upload-item">
@@ -208,7 +208,7 @@
                                 <span class="upload-title">法人身份证反面 <span class="required">*</span></span>
                                 <span class="upload-desc">身份证国徽面</span>
                             </div>
-                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_back }" @click="triggerUpload('idBackInput')">
+                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_back }" @click="triggerUpload(idBackInput)">
                                 <div v-if="!form.legal_person_id_back" class="upload-placeholder">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -229,7 +229,7 @@
                                     <button type="button" class="remove-btn" @click.stop="removeFile('legal_person_id_back')">×</button>
                                 </div>
                             </div>
-                            <input type="file" ref="idBackInput" @change="handleFileUpload($event, 'legal_person_id_back')" accept="image/*,.pdf" style="display:none">
+                            <input type="file" :ref="el => idBackInput = el" @change="handleFileUpload($event, 'legal_person_id_back')" accept="image/*,.pdf" style="display:none">
                         </div>
                     </div>
 
@@ -244,7 +244,7 @@
                             </div>
                             <div class="other-upload-actions">
                                 <button type="button" class="btn-sm" @click="triggerOtherUpload(index)">选择文件</button>
-                                <input type="file" :ref="'otherInput' + index" @change="handleOtherFileUpload($event, index)" accept="image/*,.pdf" style="display:none">
+                                <input type="file" class="other-cert-input" @change="handleOtherFileUpload($event, index)" accept="image/*,.pdf" style="display:none">
                                 <button type="button" class="btn-sm btn-danger" @click="removeOtherCert(index)">删除</button>
                             </div>
                         </div>
