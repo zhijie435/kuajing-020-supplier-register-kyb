@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业资质详情 - 在线课程教务系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <div class="header-row">
+                    <div>
+                        <button class="btn-back" @click="goBack">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            返回列表
+                        </button>
+                        <h1 class="detail-title">{{ detail.company_name || '企业详情' }}</h1>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn-refresh" @click="fetchDetail" :disabled="loading">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'spin': loading }">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            刷新
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="loading" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>加载中...</p>
+            </div>
+
+            <div v-else-if="error" class="error-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p>{{ error }}</p>
+                <button class="btn-submit" @click="fetchDetail">重新加载</button>
+            </div>
+
+            <div v-else class="detail-content">
+                <div class="detail-header">
+                    <div class="detail-status">
+                        <span :class="['status-badge large', 'status-' + detail.status]">
+                            {{ detail.status_text }}
+                        </span>
+                        <span v-if="detail.remark" class="remark-text">备注：{{ detail.remark }}</span>
+                    </div>
+                    <div class="detail-meta">
+                        <span>提交时间：{{ formatTime(detail.created_at) }}</span>
+                        <span>更新时间：{{ formatTime(detail.updated_at) }}</span>
+                    </div>
+                </div>
+
+                <div class="upload-progress-section">
+                    <h3 class="section-subtitle">证照上传进度</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-track">
+                            <div class="progress-fill" :style="{ width: detail.upload_progress + '%' }"></div>
+                        </div>
+                        <span class="progress-text">{{ detail.upload_count }} / {{ detail.total_upload_count }} 项已上传 ({{ detail.upload_progress }}%)</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h2 class="section-title">企业基本信息</h2>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">企业名称</span>
+                            <span class="detail-value">{{ detail.company_name || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">统一社会信用代码</span>
+                            <span class="detail-value mono">{{ detail.unified_social_credit_code || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">法定代表人</span>
+                            <span class="detail-value">{{ detail.legal_person || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">法人身份证号</span>
+                            <span class="detail-value mono">{{ detail.legal_person_id_card || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">注册资本</span>
+                            <span class="detail-value">{{ detail.registered_capital || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">成立日期</span>
+                            <span class="detail-value">{{ detail.establish_date || '-' }}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">经营范围</span>
+                            <span class="detail-value">{{ detail.business_scope || '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h2 class="section-title">注册地址</h2>
+                    <div class="detail-grid">
+                        <div class="detail-item full-width">
+                            <span class="detail-label">详细地址</span>
+                            <span class="detail-value">{{ detail.full_address || '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h2 class="section-title">联系信息</h2>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">联系人姓名</span>
+                            <span class="detail-value">{{ detail.contact_name || '-' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">联系电话</span>
+                            <span class="detail-value mono">{{ detail.contact_phone || '-' }}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">联系邮箱</span>
+                            <span class="detail-value">{{ detail.contact_email || '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h2 class="section-title">资质证照详情追踪</h2>
+                    <div class="certificates-list">
+                        <div :class="['cert-item', { 'uploaded': detail.business_license }]">
+                            <div class="cert-status-icon">
+                                <svg v-if="detail.business_license" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </div>
+                            <div class="cert-info">
+                                <span class="cert-name">营业执照</span>
+                                <span class="cert-status-text">{{ detail.business_license ? '已上传' : '未上传' }}</span>
+                            </div>
+                            <div class="cert-preview" v-if="detail.business_license">
+                                <img v-if="isImage(detail.business_license)" :src="detail.business_license" alt="营业执照" @click="previewImage(detail.business_license)">
+                                <a v-else :href="detail.business_license" target="_blank" class="file-link">查看文件</a>
+                            </div>
+                        </div>
+
+                        <div :class="['cert-item', { 'uploaded': detail.legal_person_id_front }]">
+                            <div class="cert-status-icon">
+                                <svg v-if="detail.legal_person_id_front" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </div>
+                            <div class="cert-info">
+                                <span class="cert-name">法人身份证正面</span>
+                                <span class="cert-status-text">{{ detail.legal_person_id_front ? '已上传' : '未上传' }}</span>
+                            </div>
+                            <div class="cert-preview" v-if="detail.legal_person_id_front">
+                                <img v-if="isImage(detail.legal_person_id_front)" :src="detail.legal_person_id_front" alt="身份证正面" @click="previewImage(detail.legal_person_id_front)">
+                                <a v-else :href="detail.legal_person_id_front" target="_blank" class="file-link">查看文件</a>
+                            </div>
+                        </div>
+
+                        <div :class="['cert-item', { 'uploaded': detail.legal_person_id_back }]">
+                            <div class="cert-status-icon">
+                                <svg v-if="detail.legal_person_id_back" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </div>
+                            <div class="cert-info">
+                                <span class="cert-name">法人身份证反面</span>
+                                <span class="cert-status-text">{{ detail.legal_person_id_back ? '已上传' : '未上传' }}</span>
+                            </div>
+                            <div class="cert-preview" v-if="detail.legal_person_id_back">
+                                <img v-if="isImage(detail.legal_person_id_back)" :src="detail.legal_person_id_back" alt="身份证反面" @click="previewImage(detail.legal_person_id_back)">
+                                <a v-else :href="detail.legal_person_id_back" target="_blank" class="file-link">查看文件</a>
+                            </div>
+                        </div>
+
+                        <template v-if="detail.other_certificates && detail.other_certificates.length > 0">
+                            <div v-for="(cert, index) in detail.other_certificates" :key="'other-' + index" :class="['cert-item', { 'uploaded': cert.url }]">
+                                <div class="cert-status-icon">
+                                    <svg v-if="cert.url" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                    <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <div class="cert-info">
+                                    <span class="cert-name">{{ cert.name || '其他证照' + (index + 1) }}</span>
+                                    <span class="cert-status-text">{{ cert.url ? '已上传' : '未上传' }}</span>
+                                    <span v-if="cert.original_name" class="cert-file-name">{{ cert.original_name }}</span>
+                                </div>
+                                <div class="cert-preview" v-if="cert.url">
+                                    <img v-if="isImage(cert.url)" :src="cert.url" :alt="cert.name" @click="previewImage(cert.url)">
+                                    <a v-else :href="cert.url" target="_blank" class="file-link">查看文件</a>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div v-if="!detail.other_certificates || detail.other_certificates.length === 0" class="cert-item empty-other">
+                            <div class="cert-status-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </div>
+                            <div class="cert-info">
+                                <span class="cert-name">其他证照</span>
+                                <span class="cert-status-text">暂未上传其他证照（选填）</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="previewModal" class="image-preview-modal" @click="closePreview">
+            <div class="preview-content" @click.stop>
+                <button class="close-preview" @click="closePreview">×</button>
+                <img :src="previewImageUrl" alt="预览图片">
+            </div>
+        </div>
+    </div>
+
+    <script src="js/detail.js"></script>
+</body>
+</html>

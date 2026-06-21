@@ -28,54 +28,126 @@ if (!empty($input['contact_email']) && !filter_var($input['contact_email'], FILT
 
 try {
     $pdo = get_db_connection();
+    $pdo->beginTransaction();
     
-    $checkSql = "SELECT id FROM supplier_kyb WHERE unified_social_credit_code = ?";
+    $creditCode = $input['unified_social_credit_code'];
+    
+    $checkSql = "SELECT id, status FROM supplier_kyb WHERE unified_social_credit_code = ? FOR UPDATE";
     $stmt = $pdo->prepare($checkSql);
-    $stmt->execute([$input['unified_social_credit_code']]);
-    if ($stmt->fetch()) {
-        json_response(400, '该统一社会信用代码已提交过注册');
-    }
-    
-    $sql = "INSERT INTO supplier_kyb (
-        company_name, unified_social_credit_code, legal_person, legal_person_id_card,
-        registered_capital, establish_date, business_scope,
-        registered_address_province, registered_address_city, registered_address_district, registered_address_detail,
-        contact_name, contact_phone, contact_email,
-        business_license, legal_person_id_front, legal_person_id_back, other_certificates
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt->execute([$creditCode]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $otherCerts = !empty($input['other_certificates']) ? json_encode($input['other_certificates'], JSON_UNESCAPED_UNICODE) : null;
     
-    $stmt = $pdo->prepare($sql);
-    $result = $stmt->execute([
-        $input['company_name'],
-        $input['unified_social_credit_code'],
-        $input['legal_person'],
-        $input['legal_person_id_card'] ?? null,
-        $input['registered_capital'] ?? null,
-        $input['establish_date'] ?? null,
-        $input['business_scope'] ?? null,
-        $input['registered_address_province'] ?? null,
-        $input['registered_address_city'] ?? null,
-        $input['registered_address_district'] ?? null,
-        $input['registered_address_detail'] ?? null,
-        $input['contact_name'],
-        $input['contact_phone'],
-        $input['contact_email'] ?? null,
-        $input['business_license'] ?? null,
-        $input['legal_person_id_front'] ?? null,
-        $input['legal_person_id_back'] ?? null,
-        $otherCerts
-    ]);
+    if ($existing) {
+        if ($existing['status'] == 1) {
+            $pdo->rollBack();
+            json_response(400, '该企业已通过审核，无需重复提交');
+        }
+        
+        $sql = "UPDATE supplier_kyb SET
+            company_name = ?,
+            legal_person = ?,
+            legal_person_id_card = ?,
+            registered_capital = ?,
+            establish_date = ?,
+            business_scope = ?,
+            registered_address_province = ?,
+            registered_address_city = ?,
+            registered_address_district = ?,
+            registered_address_detail = ?,
+            contact_name = ?,
+            contact_phone = ?,
+            contact_email = ?,
+            business_license = ?,
+            legal_person_id_front = ?,
+            legal_person_id_back = ?,
+            other_certificates = ?,
+            status = 0,
+            remark = NULL,
+            updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?";
+        
+        $stmt = $pdo->prepare($sql);
+        $result = $stmt->execute([
+            $input['company_name'],
+            $input['legal_person'],
+            $input['legal_person_id_card'] ?? null,
+            $input['registered_capital'] ?? null,
+            $input['establish_date'] ?? null,
+            $input['business_scope'] ?? null,
+            $input['registered_address_province'] ?? null,
+            $input['registered_address_city'] ?? null,
+            $input['registered_address_district'] ?? null,
+            $input['registered_address_detail'] ?? null,
+            $input['contact_name'],
+            $input['contact_phone'],
+            $input['contact_email'] ?? null,
+            $input['business_license'] ?? null,
+            $input['legal_person_id_front'] ?? null,
+            $input['legal_person_id_back'] ?? null,
+            $otherCerts,
+            $existing['id']
+        ]);
+        
+        $recordId = $existing['id'];
+        $isNew = false;
+    } else {
+        $sql = "INSERT INTO supplier_kyb (
+            company_name, unified_social_credit_code, legal_person, legal_person_id_card,
+            registered_capital, establish_date, business_scope,
+            registered_address_province, registered_address_city, registered_address_district, registered_address_detail,
+            contact_name, contact_phone, contact_email,
+            business_license, legal_person_id_front, legal_person_id_back, other_certificates,
+            status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)";
+        
+        $stmt = $pdo->prepare($sql);
+        $result = $stmt->execute([
+            $input['company_name'],
+            $creditCode,
+            $input['legal_person'],
+            $input['legal_person_id_card'] ?? null,
+            $input['registered_capital'] ?? null,
+            $input['establish_date'] ?? null,
+            $input['business_scope'] ?? null,
+            $input['registered_address_province'] ?? null,
+            $input['registered_address_city'] ?? null,
+            $input['registered_address_district'] ?? null,
+            $input['registered_address_detail'] ?? null,
+            $input['contact_name'],
+            $input['contact_phone'],
+            $input['contact_email'] ?? null,
+            $input['business_license'] ?? null,
+            $input['legal_person_id_front'] ?? null,
+            $input['legal_person_id_back'] ?? null,
+            $otherCerts
+        ]);
+        
+        $recordId = $pdo->lastInsertId();
+        $isNew = true;
+    }
     
     if ($result) {
-        json_response(200, '注册提交成功，请等待审核', [
-            'id' => $pdo->lastInsertId()
-        ]);
+        $pdo->commit();
+        
+        $queryStmt = $pdo->prepare("SELECT id, status, created_at, updated_at FROM supplier_kyb WHERE id = ?");
+        $queryStmt->execute([$recordId]);
+        $record = $queryStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $statusText = ['待审核', '审核通过', '审核拒绝'];
+        $record['status_text'] = $statusText[$record['status']] ?? '未知';
+        $record['is_new'] = $isNew;
+        
+        json_response(200, $isNew ? '注册提交成功，请等待审核' : '资料已更新，重新进入审核队列', $record);
     } else {
+        $pdo->rollBack();
         json_response(500, '注册提交失败');
     }
     
 } catch (PDOException $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     json_response(500, '服务器错误: ' . $e->getMessage());
 }

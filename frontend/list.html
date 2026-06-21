@@ -3,138 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>企业资质审核列表 - 在线课程教务系统</title>
+    <title>供应商KYB列表 - 在线课程教务系统</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/list.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body>
     <div id="app">
         <div class="container">
             <div class="header">
-                <div class="header-row">
-                    <div>
-                        <h1>企业资质审核管理</h1>
-                        <p class="subtitle">KYB 企业资料与证照上传追踪</p>
+                <div class="header-left">
+                    <h1>供应商资质管理</h1>
+                    <p class="subtitle">KYB 供应商入驻审核列表</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn-refresh" @click="loadList" :disabled="loading">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'spin': loading }">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        刷新
+                    </button>
+                    <button class="btn-new" onclick="location.href='index.html'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        新增注册
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-card">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label>审核状态</label>
+                        <select v-model="filters.status" @change="loadList(1)">
+                            <option value="">全部</option>
+                            <option value="0">待审核</option>
+                            <option value="1">审核通过</option>
+                            <option value="2">审核拒绝</option>
+                        </select>
                     </div>
-                    <div class="header-actions">
-                        <button class="btn-refresh" @click="refreshList" :disabled="loading">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'spin': loading }">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                            刷新
-                        </button>
-                        <a href="index.html" class="btn-nav">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 20h9"></path>
-                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                            </svg>
-                            新增注册
-                        </a>
+                    <div class="filter-item search-item">
+                        <label>关键词搜索</label>
+                        <div class="search-wrapper">
+                            <input type="text" v-model="filters.keyword" placeholder="企业名称/统一社会信用代码/联系人" @keyup.enter="loadList(1)">
+                            <button class="search-btn" @click="loadList(1)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="filter-item stats-item">
+                        <div class="stat-badge pending">
+                            <span class="stat-count">{{ stats.pending }}</span>
+                            <span class="stat-label">待审核</span>
+                        </div>
+                        <div class="stat-badge approved">
+                            <span class="stat-count">{{ stats.approved }}</span>
+                            <span class="stat-label">已通过</span>
+                        </div>
+                        <div class="stat-badge rejected">
+                            <span class="stat-count">{{ stats.rejected }}</span>
+                            <span class="stat-label">已拒绝</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="filter-bar">
-                <div class="filter-item">
-                    <label>搜索</label>
-                    <input type="text" v-model="keyword" placeholder="企业名称/信用代码/联系人/电话" @keyup.enter="searchList">
+            <div class="table-card" v-if="!loading && !error">
+                <div v-if="list.length === 0" class="empty-state">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    <h3>暂无数据</h3>
+                    <p>{{ filters.keyword || filters.status !== '' ? '没有找到匹配的供应商记录' : '还没有供应商提交注册申请' }}</p>
+                    <button class="btn-new" onclick="location.href='index.html'" v-if="!filters.keyword && filters.status === ''">立即新增</button>
                 </div>
-                <div class="filter-item">
-                    <label>审核状态</label>
-                    <select v-model="statusFilter" @change="searchList">
-                        <option value="">全部状态</option>
-                        <option value="0">待审核</option>
-                        <option value="1">审核通过</option>
-                        <option value="2">审核拒绝</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <button class="btn-search" @click="searchList">搜索</button>
-                </div>
-            </div>
 
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <span class="stat-label">总记录数</span>
-                    <span class="stat-value">{{ pagination.total }}</span>
-                </div>
-                <div class="stat-item pending">
-                    <span class="stat-label">待审核</span>
-                    <span class="stat-value">{{ stats.pending }}</span>
-                </div>
-                <div class="stat-item approved">
-                    <span class="stat-label">已通过</span>
-                    <span class="stat-value">{{ stats.approved }}</span>
-                </div>
-                <div class="stat-item rejected">
-                    <span class="stat-label">已拒绝</span>
-                    <span class="stat-value">{{ stats.rejected }}</span>
+                <div v-else>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-company">企业名称</th>
+                                    <th class="col-code">统一社会信用代码</th>
+                                    <th class="col-contact">联系人</th>
+                                    <th class="col-status">审核状态</th>
+                                    <th class="col-remark">审核备注</th>
+                                    <th class="col-date">提交时间</th>
+                                    <th class="col-actions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in list" :key="item.id" class="table-row">
+                                    <td class="col-company">
+                                        <div class="company-info">
+                                            <div class="company-avatar">{{ item.company_name.charAt(0) }}</div>
+                                            <div class="company-details">
+                                                <div class="company-name">{{ item.company_name }}</div>
+                                                <div class="company-legal">法人：{{ item.legal_person }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="col-code">
+                                        <span class="code-text">{{ item.unified_social_credit_code }}</span>
+                                    </td>
+                                    <td class="col-contact">
+                                        <div class="contact-info">
+                                            <div>{{ item.contact_name }}</div>
+                                            <div class="contact-phone">{{ item.contact_phone }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="col-status">
+                                        <span :class="['status-badge', 'status-' + item.status]">
+                                            <span class="status-dot"></span>
+                                            {{ item.status_text }}
+                                        </span>
+                                    </td>
+                                    <td class="col-remark">
+                                        <span v-if="item.remark" class="remark-text">{{ item.remark }}</span>
+                                        <span v-else class="remark-empty">-</span>
+                                    </td>
+                                    <td class="col-date">
+                                        <div class="date-info">
+                                            <div>{{ formatDate(item.created_at) }}</div>
+                                            <div class="date-update" v-if="item.updated_at && item.updated_at !== item.created_at">
+                                                更新：{{ formatDate(item.updated_at) }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="col-actions">
+                                        <div class="action-buttons">
+                                            <button class="action-btn view" @click="viewDetail(item.id)" title="查看详情">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                                详情
+                                            </button>
+                                            <button class="action-btn edit" @click="editItem(item.id)" title="编辑" :disabled="item.status == 1">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                                编辑
+                                            </button>
+                                            <button class="action-btn refresh-status" @click="refreshStatus(item)" title="刷新状态">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <div class="pagination-info">
+                            共 <strong>{{ pagination.total }}</strong> 条记录，
+                            第 <strong>{{ pagination.page }}</strong> / {{ pagination.totalPages }} 页
+                        </div>
+                        <div class="pagination-controls">
+                            <button @click="loadList(pagination.page - 1)" :disabled="pagination.page <= 1 || loading">上一页</button>
+                            <button v-for="p in visiblePages" :key="p" @click="loadList(p)" :class="{ active: p === pagination.page }" :disabled="loading">
+                                {{ p }}
+                            </button>
+                            <button @click="loadList(pagination.page + 1)" :disabled="pagination.page >= pagination.totalPages || loading">下一页</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div v-if="loading" class="loading-state">
-                <div class="loading-spinner"></div>
+                <div class="spinner"></div>
                 <p>加载中...</p>
             </div>
 
-            <div v-else-if="list.length === 0" class="empty-state">
+            <div v-if="error" class="error-state">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                <p>暂无数据</p>
+                <h3>加载失败</h3>
+                <p>{{ error }}</p>
+                <button class="btn-retry" @click="loadList()">重试</button>
             </div>
 
-            <div v-else class="list-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>企业名称</th>
-                            <th>统一社会信用代码</th>
-                            <th>法定代表人</th>
-                            <th>联系人</th>
-                            <th>联系电话</th>
-                            <th>审核状态</th>
-                            <th>提交时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="item in list" :key="item.id" class="table-row">
-                            <td>{{ item.id }}</td>
-                            <td class="company-name">{{ item.company_name }}</td>
-                            <td class="mono">{{ item.unified_social_credit_code }}</td>
-                            <td>{{ item.legal_person }}</td>
-                            <td>{{ item.contact_name }}</td>
-                            <td class="mono">{{ item.contact_phone }}</td>
-                            <td>
-                                <span :class="['status-badge', 'status-' + item.status]">
-                                    {{ item.status_text }}
-                                </span>
-                            </td>
-                            <td class="time">{{ formatTime(item.created_at) }}</td>
-                            <td>
-                                <button class="btn-view" @click="viewDetail(item.id)">查看详情</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="pagination">
-                    <span class="page-info">
-                        第 {{ pagination.page }} / {{ pagination.total_pages }} 页，共 {{ pagination.total }} 条
-                    </span>
-                    <div class="page-buttons">
-                        <button class="btn-page" @click="changePage(1)" :disabled="pagination.page <= 1 || loading">首页</button>
-                        <button class="btn-page" @click="changePage(pagination.page - 1)" :disabled="pagination.page <= 1 || loading">上一页</button>
-                        <button class="btn-page" @click="changePage(pagination.page + 1)" :disabled="pagination.page >= pagination.total_pages || loading">下一页</button>
-                        <button class="btn-page" @click="changePage(pagination.total_pages)" :disabled="pagination.page >= pagination.total_pages || loading">末页</button>
+            <div v-if="showDetail && detail" class="detail-modal">
+                <div class="detail-content">
+                    <div class="detail-header">
+                        <h2>供应商详情</h2>
+                        <span :class="['status-badge', 'status-' + detail.status]">
+                            <span class="status-dot"></span>
+                            {{ detail.status_text }}
+                        </span>
+                        <button class="close-btn" @click="closeDetail">×</button>
+                    </div>
+                    <div class="detail-body">
+                        <div class="detail-section">
+                            <h3>基本信息</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item"><label>企业名称</label><span>{{ detail.company_name }}</span></div>
+                                <div class="detail-item"><label>统一社会信用代码</label><span>{{ detail.unified_social_credit_code }}</span></div>
+                                <div class="detail-item"><label>法定代表人</label><span>{{ detail.legal_person }}</span></div>
+                                <div class="detail-item"><label>注册资本</label><span>{{ detail.registered_capital || '-' }}</span></div>
+                                <div class="detail-item"><label>成立日期</label><span>{{ detail.establish_date || '-' }}</span></div>
+                                <div class="detail-item"><label>注册地址</label><span>{{ detail.full_address || '-' }}</span></div>
+                            </div>
+                        </div>
+                        <div class="detail-section">
+                            <h3>联系信息</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item"><label>联系人</label><span>{{ detail.contact_name }}</span></div>
+                                <div class="detail-item"><label>联系电话</label><span>{{ detail.contact_phone }}</span></div>
+                                <div class="detail-item full-width"><label>联系邮箱</label><span>{{ detail.contact_email || '-' }}</span></div>
+                            </div>
+                        </div>
+                        <div class="detail-section" v-if="detail.remark">
+                            <h3>审核备注</h3>
+                            <div class="remark-box">{{ detail.remark }}</div>
+                        </div>
+                    </div>
+                    <div class="detail-footer">
+                        <button class="btn-close" @click="closeDetail">关闭</button>
+                        <button class="btn-edit" @click="editItem(detail.id)" :disabled="detail.status == 1">
+                            {{ detail.status == 1 ? '已审核，不可编辑' : '编辑资料' }}
+                        </button>
                     </div>
                 </div>
+            </div>
+
+            <div v-if="showToast" class="toast" :class="toastType">
+                {{ toastMessage }}
             </div>
         </div>
     </div>

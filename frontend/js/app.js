@@ -1,4 +1,4 @@
-const { createApp, reactive, ref, computed, nextTick } = Vue;
+const { createApp, reactive, ref, computed, nextTick, onMounted } = Vue;
 
 const API_BASE = '../backend/api';
 
@@ -11,6 +11,10 @@ createApp({
         const errors = reactive({});
         const uploadErrors = reactive({});
         const globalError = ref('');
+        const isEditMode = ref(false);
+        const editId = ref(0);
+        const pageTitle = ref('供应商资质认证');
+        const pageSubtitle = ref('KYB (Know Your Business) 企业信息注册');
 
         const businessLicenseInput = ref(null);
         const idFrontInput = ref(null);
@@ -299,8 +303,15 @@ createApp({
                 if (result.code === 200) {
                     submitSuccess.value = true;
                     try {
-                        localStorage.setItem('lastKybId', result.data.id);
+                        sessionStorage.setItem('lastKybId', result.data.id);
+                        sessionStorage.setItem('justSavedKyb', '1');
                     } catch (e) {}
+                    
+                    if (!isEditMode.value) {
+                        setTimeout(() => {
+                            location.href = 'list.html';
+                        }, 2000);
+                    }
                 } else {
                     globalError.value = result.message || '提交失败，请检查输入后重试';
                     if (result.code === 400) {

@@ -1,42 +1,91 @@
-const { createApp, reactive, ref, onMounted } = Vue;
+const { createApp, reactive, ref, computed, onMounted } = Vue;
 
 const API_BASE = '../backend/api';
 
 createApp({
     setup() {
         const loading = ref(false);
+        const error = ref('');
         const list = ref([]);
-        const keyword = ref('');
-        const statusFilter = ref('');
+        const detail = ref(null);
+        const showDetail = ref(false);
+        const showToast = ref(false);
+        const toastMessage = ref('');
+        const toastType = ref('success');
+
+        const filters = reactive({
+            status: '',
+            keyword: ''
+        });
+
         const pagination = reactive({
             page: 1,
-            page_size: 10,
+            pageSize: 10,
             total: 0,
-            total_pages: 0
+            totalPages: 0
         });
+
         const stats = reactive({
             pending: 0,
             approved: 0,
             rejected: 0
         });
 
-        function formatTime(timeStr) {
-            if (!timeStr) return '-';
-            return timeStr;
+        const visiblePages = computed(() => {
+            const pages = [];
+            const total = pagination.totalPages;
+            const current = pagination.page;
+            
+            if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i);
+            } else {
+                if (current <= 4) {
+                    for (let i = 1; i <= 5; i++) pages.push(i);
+                } else if (current >= total - 3) {
+                    for (let i = total - 4; i <= total; i++) pages.push(i);
+                } else {
+                    for (let i = current - 2; i <= current + 2; i++) pages.push(i);
+                }
+            }
+            return pages;
+        });
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const pad = n => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
 
-        async function fetchList() {
+        function showToastMessage(msg, type = 'success') {
+            toastMessage.value = msg;
+            toastType.value = type;
+            showToast.value = true;
+            setTimeout(() => {
+                showToast.value = false;
+            }, 3000);
+        }
+
+        async function loadList(page = null) {
+            if (page !== null) {
+                pagination.page = page;
+            }
+            
             loading.value = true;
+            error.value = '';
+
             try {
                 const params = new URLSearchParams({
                     page: pagination.page,
-                    page_size: pagination.page_size
+                    pageSize: pagination.pageSize
                 });
-                if (keyword.value) {
-                    params.append('keyword', keyword.value);
+                
+                if (filters.status !== '') {
+                    params.append('status', filters.status);
                 }
-                if (statusFilter.value !== '') {
-                    params.append('status', statusFilter.value);
+                if (filters.keyword) {
+                    params.append('keyword', filters.keyword);
                 }
 
                 const response = await fetch(`${API_BASE}/list.php?${params.toString()}`);
@@ -44,132 +93,119 @@ createApp({
 
                 if (result.code === 200) {
                     list.value = result.data.list;
-                    pagination.total = result.data.total;
-                    pagination.page = result.data.page;
-                    pagination.page_size = result.data.page_size;
-                    pagination.total_pages = result.data.total_pages;
-                    calculateStats(result.data.list);
+                    pagination.total = result.data.pagination.total;
+                    pagination.totalPages = result.data.pagination.totalPages;
+                    
+                    let pending = 0, approved = 0, rejected = 0;
+                    list.value.forEach(item => {
+                        if (item.status == 0) pending++;
+                        else if (item.status == 1) approved++;
+                        else if (item.status == 2) rejected++;
+                    });
+                    stats.pending = pending;
+                    stats.approved = approved;
+                    stats.rejected = rejected;
                 } else {
-                    console.warn('获取列表失败:', result.message);
-                    list.value = [];
+                    throw new Error(result.message || '加载失败');
                 }
-            } catch (error) {
-                console.warn('获取列表接口调用失败，使用模拟数据:', error);
-                useMockData();
+            } catch (e) {
+                console.error('加载列表失败:', e);
+                error.value = e.message || '加载失败，请检查PHP后端是否正常运行';
+                list.value = [];
             } finally {
                 loading.value = false;
             }
         }
 
-        function calculateStats(dataList) {
-            stats.pending = dataList.filter(i => i.status === 0).length;
-            stats.approved = dataList.filter(i => i.status === 1).length;
-            stats.rejected = dataList.filter(i => i.status === 2).length;
-        }
-
-        function useMockData() {
-            const mockList = [
-                {
-                    id: 1,
-                    company_name: '北京科技发展有限公司',
-                    unified_social_credit_code: '91110108MA01ABCD23',
-                    legal_person: '张三',
-                    contact_name: '李四',
-                    contact_phone: '13800138001',
-                    status: 0,
-                    status_text: '待审核',
-                    created_at: '2024-01-15 10:30:00',
-                    updated_at: '2024-01-15 10:30:00'
-                },
-                {
-                    id: 2,
-                    company_name: '上海教育科技有限公司',
-                    unified_social_credit_code: '91310101MA1GHIJ456',
-                    legal_person: '王五',
-                    contact_name: '赵六',
-                    contact_phone: '13900139002',
-                    status: 1,
-                    status_text: '审核通过',
-                    created_at: '2024-01-10 14:20:00',
-                    updated_at: '2024-01-12 09:15:00'
-                },
-                {
-                    id: 3,
-                    company_name: '广州信息技术有限公司',
-                    unified_social_credit_code: '91440101MA9KLMN789',
-                    legal_person: '陈七',
-                    contact_name: '周八',
-                    contact_phone: '13700137003',
-                    status: 2,
-                    status_text: '审核拒绝',
-                    created_at: '2024-01-08 16:45:00',
-                    updated_at: '2024-01-09 11:30:00'
-                },
-                {
-                    id: 4,
-                    company_name: '深圳创新科技有限公司',
-                    unified_social_credit_code: '91440300MA5OPQR012',
-                    legal_person: '吴九',
-                    contact_name: '郑十',
-                    contact_phone: '13600136004',
-                    status: 0,
-                    status_text: '待审核',
-                    created_at: '2024-01-14 09:00:00',
-                    updated_at: '2024-01-14 09:00:00'
-                },
-                {
-                    id: 5,
-                    company_name: '杭州数字教育有限公司',
-                    unified_social_credit_code: '91330100MA2STUV345',
-                    legal_person: '冯十一',
-                    contact_name: '钱十二',
-                    contact_phone: '13500135005',
-                    status: 1,
-                    status_text: '审核通过',
-                    created_at: '2024-01-05 11:10:00',
-                    updated_at: '2024-01-07 15:20:00'
+        async function refreshStatus(item) {
+            if (!item || !item.id) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/detail.php?id=${item.id}`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    const idx = list.value.findIndex(i => i.id === item.id);
+                    if (idx !== -1) {
+                        list.value[idx].status = result.data.status;
+                        list.value[idx].status_text = result.data.status_text;
+                        list.value[idx].remark = result.data.remark;
+                        list.value[idx].updated_at = result.data.updated_at;
+                    }
+                    showToastMessage('状态已刷新');
                 }
-            ];
-            list.value = mockList;
-            pagination.total = mockList.length;
-            pagination.total_pages = 1;
-            calculateStats(mockList);
+            } catch (e) {
+                showToastMessage('刷新失败: ' + (e.message || '未知错误'), 'error');
+            }
         }
 
-        function searchList() {
-            pagination.page = 1;
-            fetchList();
+        async function viewDetail(id) {
+            if (!id) return;
+            
+            loading.value = true;
+            try {
+                const response = await fetch(`${API_BASE}/detail.php?id=${id}`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    detail.value = result.data;
+                    showDetail.value = true;
+                } else {
+                    throw new Error(result.message || '获取详情失败');
+                }
+            } catch (e) {
+                console.error('获取详情失败:', e);
+                showToastMessage('获取详情失败: ' + (e.message || '未知错误'), 'error');
+            } finally {
+                loading.value = false;
+            }
         }
 
-        function refreshList() {
-            fetchList();
+        function closeDetail() {
+            showDetail.value = false;
+            detail.value = null;
         }
 
-        function changePage(page) {
-            pagination.page = page;
-            fetchList();
+        function editItem(id) {
+            sessionStorage.setItem('editKybId', id);
+            location.href = 'index.html?edit=' + id;
         }
 
-        function viewDetail(id) {
-            window.location.href = `detail.html?id=${id}`;
+        function checkAutoRefresh() {
+            try {
+                const justSaved = sessionStorage.getItem('justSavedKyb');
+                if (justSaved) {
+                    sessionStorage.removeItem('justSavedKyb');
+                    showToastMessage('注册提交成功，已进入审核队列', 'success');
+                    loadList(1);
+                }
+            } catch (e) {}
         }
 
         onMounted(() => {
-            fetchList();
+            loadList();
+            checkAutoRefresh();
         });
 
         return {
             loading,
+            error,
             list,
-            keyword,
-            statusFilter,
+            filters,
             pagination,
             stats,
-            formatTime,
-            searchList,
-            refreshList,
-            changePage,
-            viewDetail
+            visiblePages,
+            detail,
+            showDetail,
+            showToast,
+            toastMessage,
+            toastType,
+            formatDate,
+            loadList,
+            refreshStatus,
+            viewDetail,
+            closeDetail,
+            editItem
         };
     }
 }).mount('#app');
