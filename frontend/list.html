@@ -155,11 +155,18 @@
                                                 </svg>
                                                 编辑
                                             </button>
+                                            <button class="action-btn review" @click="openReviewModal(item)" title="审核" :disabled="item.status != 0">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                                </svg>
+                                                审核
+                                            </button>
                                             <button class="action-btn refresh-status" @click="refreshStatus(item)" title="刷新状态">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                     <polyline points="23 4 23 10 17 10"></polyline>
                                                     <polyline points="1 20 1 14 7 14"></polyline>
-                                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                                    <path d="M3.51 9a9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                                 </svg>
                                             </button>
                                         </div>
@@ -212,6 +219,17 @@
                         <button class="close-btn" @click="closeDetail">×</button>
                     </div>
                     <div class="detail-body">
+                        <div v-if="detail.status == 0 && reviewMissingFiles.length > 0" class="review-alert warning">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            <div class="alert-content">
+                                <strong>证照不完整提醒</strong>
+                                <p>缺少以下必需证照：{{ reviewMissingFiles.join('、') }}。请先补全证照后再审核通过。</p>
+                            </div>
+                        </div>
                         <div class="detail-section">
                             <h3>基本信息</h3>
                             <div class="detail-grid">
@@ -240,6 +258,63 @@
                         <button class="btn-close" @click="closeDetail">关闭</button>
                         <button class="btn-edit" @click="editItem(detail.id)" :disabled="detail.status == 1">
                             {{ detail.status == 1 ? '已审核，不可编辑' : '编辑资料' }}
+                        </button>
+                        <button v-if="detail.status == 0" class="btn-review-pass" @click="quickApprove(detail)" :disabled="reviewSubmitting || reviewMissingFiles.length > 0" :title="reviewMissingFiles.length > 0 ? '证照不完整，无法审核通过' : '一键审核通过'">
+                            ✓ 审核通过
+                        </button>
+                        <button v-if="detail.status == 0" class="btn-review-reject" @click="openReviewModalFromDetail(detail)" :disabled="reviewSubmitting">
+                            ✗ 审核拒绝
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showReviewModal" class="review-modal">
+                <div class="review-content">
+                    <div class="review-header">
+                        <h2>审核供应商资质</h2>
+                        <button class="close-btn" @click="closeReviewModal">×</button>
+                    </div>
+                    <div class="review-body">
+                        <div class="review-company-info">
+                            <strong>{{ reviewTarget.company_name }}</strong>
+                            <span class="code-text">{{ reviewTarget.unified_social_credit_code }}</span>
+                        </div>
+                        <div v-if="reviewMissingFiles.length > 0" class="review-alert error">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <div class="alert-content">
+                                <strong>证照不完整</strong>
+                                <p>缺少：{{ reviewMissingFiles.join('、') }}。选择"审核通过"将被拒绝。</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>审核结果 <span class="required">*</span></label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" v-model="reviewForm.status" :value="1" :disabled="reviewMissingFiles.length > 0">
+                                    <span class="radio-label">审核通过</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" v-model="reviewForm.status" :value="2">
+                                    <span class="radio-label">审核拒绝</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>审核备注 <span class="required">*</span></label>
+                            <textarea v-model="reviewForm.remark" placeholder="请填写审核备注，拒绝时需说明原因" rows="4"></textarea>
+                            <div v-if="!canSubmitReview" class="form-error">请填写审核备注</div>
+                        </div>
+                    </div>
+                    <div class="review-footer">
+                        <button class="btn-cancel" @click="closeReviewModal" :disabled="reviewSubmitting">取消</button>
+                        <button class="btn-submit" @click="submitReview" :disabled="!canSubmitReview || reviewSubmitting">
+                            <span v-if="reviewSubmitting" class="spinner-inline"></span>
+                            {{ reviewSubmitting ? '提交中...' : '确认提交' }}
                         </button>
                     </div>
                 </div>

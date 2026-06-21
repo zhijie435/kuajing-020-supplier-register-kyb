@@ -65,19 +65,31 @@ try {
             throw new Exception('数据库更新失败');
         }
         
-        $freshSql = "SELECT id, status, remark, updated_at FROM supplier_kyb WHERE id = ?";
+        $freshSql = "SELECT * FROM supplier_kyb WHERE id = ?";
         $stmt = $pdo->prepare($freshSql);
         $stmt->execute([$id]);
         $updated = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        $pdo->commit();
+        if (!empty($updated['other_certificates'])) {
+            $updated['other_certificates'] = json_decode($updated['other_certificates'], true) ?: [];
+        } else {
+            $updated['other_certificates'] = [];
+        }
+        
+        $fullAddress = $updated['registered_address_province'] . 
+                       $updated['registered_address_city'] . 
+                       $updated['registered_address_district'] . 
+                       $updated['registered_address_detail'];
+        $updated['full_address'] = trim($fullAddress);
         
         $statusMap = [
+            0 => '待审核',
             1 => '审核通过',
             2 => '审核拒绝'
         ];
+        $updated['status_text'] = $statusMap[$updated['status']] ?? '未知';
         
-        $updated['status_text'] = $statusMap[$status];
+        $pdo->commit();
         
         json_response(200, '审核操作成功，状态已回写', $updated);
         

@@ -316,8 +316,10 @@ createApp({
                         }, 2000);
                     }
                 } else {
+                    globalError.value = result.message || '提交失败，请检查输入后重试';
+                    submitFailedMessage.value = result.message || '提交失败，请检查输入后重试';
+                    submitFailed.value = true;
                     if (result.code === 400) {
-                        globalError.value = result.message || '提交失败，请检查输入后重试';
                         if (result.message && result.message.includes('统一社会信用代码')) {
                             errors.unified_social_credit_code = result.message;
                             currentStep.value = 1;
@@ -330,16 +332,16 @@ createApp({
                             errors.contact_email = result.message;
                             currentStep.value = 1;
                         }
-                        scrollToError();
-                    } else {
-                        submitFailedMessage.value = result.message || '提交失败，请检查输入后重试';
-                        submitFailed.value = true;
                     }
+                    scrollToError();
                 }
             } catch (error) {
                 console.error('提交失败:', error);
-                submitFailedMessage.value = '提交失败，请稍后重试。注意：需部署 PHP + MySQL 环境后才能正常提交到数据库。';
+                const errMsg = '提交失败，请稍后重试。\n注意：需部署 PHP + MySQL 环境后才能正常提交到数据库。';
+                globalError.value = errMsg;
+                submitFailedMessage.value = errMsg;
                 submitFailed.value = true;
+                scrollToError();
             } finally {
                 submitting.value = false;
             }
