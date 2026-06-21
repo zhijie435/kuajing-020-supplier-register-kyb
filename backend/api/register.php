@@ -131,13 +131,26 @@ try {
     if ($result) {
         $pdo->commit();
         
-        $queryStmt = $pdo->prepare("SELECT id, status, created_at, updated_at FROM supplier_kyb WHERE id = ?");
+        $queryStmt = $pdo->prepare("SELECT * FROM supplier_kyb WHERE id = ?");
         $queryStmt->execute([$recordId]);
         $record = $queryStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!empty($record['other_certificates'])) {
+            $record['other_certificates'] = json_decode($record['other_certificates'], true) ?: [];
+        } else {
+            $record['other_certificates'] = [];
+        }
+        
+        $fullAddress = $record['registered_address_province'] . 
+                       $record['registered_address_city'] . 
+                       $record['registered_address_district'] . 
+                       $record['registered_address_detail'];
+        $record['full_address'] = trim($fullAddress);
         
         $statusText = ['待审核', '审核通过', '审核拒绝'];
         $record['status_text'] = $statusText[$record['status']] ?? '未知';
         $record['is_new'] = $isNew;
+        $record['can_edit'] = $record['status'] != 1;
         
         json_response(200, $isNew ? '注册提交成功，请等待审核' : '资料已更新，重新进入审核队列', $record);
     } else {

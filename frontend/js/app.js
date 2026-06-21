@@ -2,6 +2,53 @@ const { createApp, reactive, ref, computed, nextTick, onMounted } = Vue;
 
 const API_BASE = '../backend/api';
 
+const CACHE_KEYS = {
+    KYB_LIST: 'kyb_supplier_list',
+    KYB_DETAIL_PREFIX: 'kyb_supplier_detail_',
+    KYB_STATS: 'kyb_supplier_stats',
+    KYB_FORM_DRAFT: 'kyb_form_draft'
+};
+
+function clearKybCache(id = null) {
+    try {
+        localStorage.removeItem(CACHE_KEYS.KYB_LIST);
+        localStorage.removeItem(CACHE_KEYS.KYB_STATS);
+        localStorage.removeItem(CACHE_KEYS.KYB_FORM_DRAFT);
+        if (id) {
+            localStorage.removeItem(CACHE_KEYS.KYB_DETAIL_PREFIX + id);
+        }
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            if (key.startsWith(CACHE_KEYS.KYB_DETAIL_PREFIX)) {
+                localStorage.removeItem(key);
+            }
+        });
+    } catch (e) {
+        console.warn('清理缓存失败:', e);
+    }
+}
+
+function mapBackendErrorToField(message) {
+    const errorMap = [
+        { field: 'unified_social_credit_code', keywords: ['统一社会信用代码'] },
+        { field: 'contact_phone', keywords: ['联系电话'] },
+        { field: 'contact_email', keywords: ['邮箱'] },
+        { field: 'company_name', keywords: ['企业名称'] },
+        { field: 'legal_person', keywords: ['法定代表人'] },
+        { field: 'contact_name', keywords: ['联系人'] },
+        { field: 'business_license', keywords: ['营业执照'] },
+        { field: 'legal_person_id_front', keywords: ['身份证正面'] },
+        { field: 'legal_person_id_back', keywords: ['身份证反面'] }
+    ];
+    
+    for (const item of errorMap) {
+        if (item.keywords.some(kw => message.includes(kw))) {
+            return item.field;
+        }
+    }
+    return null;
+}
+
 createApp({
     setup() {
         const currentStep = ref(1);
@@ -17,6 +64,8 @@ createApp({
         const editId = ref(0);
         const pageTitle = ref('供应商资质认证');
         const pageSubtitle = ref('KYB (Know Your Business) 企业信息注册');
+        const canEdit = ref(true);
+        const editStatus = ref(0);
 
         const businessLicenseInput = ref(null);
         const idFrontInput = ref(null);
@@ -63,6 +112,12 @@ createApp({
             ];
             return parts.filter(p => p).join('');
         });
+
+        const statusTextMap = {
+            0: '待审核',
+            1: '审核通过',
+            2: '审核拒绝'
+        };
 
         function validateStep1() {
             let valid = true;
@@ -130,8 +185,28 @@ createApp({
             return valid;
         }
 
+        function showFieldError(field, message, step = 1) {
+            if (field === 'business_license' || field === 'legal_person_id_front' || field === 'legal_person_id_back') {
+                uploadErrors[field] = message;
+                currentStep.value = 2;
+            } else if (field && field.startsWith('other_')) {
+                uploadErrors[field] = message;
+                currentStep.value = 2;
+            } else if (field && errors.hasOwnProperty(field)) {
+                errors[field] = message;
+                currentStep.value = step;
+            } else {
+                globalError.value = message;
+            }
+            scrollToError();
+        }
+
         function nextStep() {
             globalError.value = '';
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             if (currentStep.value === 1 && !validateStep1()) {
                 scrollToError();
                 return;
@@ -161,6 +236,10 @@ createApp({
         }
 
         function triggerUpload(inputRef) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             if (inputRef && inputRef.value) {
                 inputRef.value.click();
             }
@@ -194,6 +273,11 @@ createApp({
         }
 
         async function handleFileUpload(event, field) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                event.target.value = '';
+                return;
+            }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -223,10 +307,18 @@ createApp({
         }
 
         function removeFile(field) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             form[field] = '';
         }
 
         function addOtherCert() {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             form.other_certificates.push({
                 name: '',
                 url: '',
@@ -236,10 +328,18 @@ createApp({
         }
 
         function removeOtherCert(index) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             form.other_certificates.splice(index, 1);
         }
 
         function triggerOtherUpload(index) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                return;
+            }
             const inputs = document.querySelectorAll('.other-cert-input');
             if (inputs[index]) {
                 inputs[index].click();
@@ -247,6 +347,11 @@ createApp({
         }
 
         async function handleOtherFileUpload(event, index) {
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法修改资料');
+                event.target.value = '';
+                return;
+            }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -273,6 +378,12 @@ createApp({
 
         async function handleSubmit() {
             globalError.value = '';
+            
+            if (!canEdit.value) {
+                showFieldError(null, '该企业已通过审核，无法提交修改');
+                return;
+            }
+            
             if (!agreed.value) {
                 globalError.value = '请先阅读并同意相关协议';
                 scrollToError();
@@ -303,6 +414,7 @@ createApp({
                 const result = await response.json();
 
                 if (result.code === 200) {
+                    clearKybCache(result.data.id);
                     submitSuccess.value = true;
                     submitFailed.value = false;
                     try {
@@ -316,21 +428,18 @@ createApp({
                         }, 2000);
                     }
                 } else {
-                    globalError.value = result.message || '提交失败，请检查输入后重试';
                     submitFailedMessage.value = result.message || '提交失败，请检查输入后重试';
                     submitFailed.value = true;
-                    if (result.code === 400) {
-                        if (result.message && result.message.includes('统一社会信用代码')) {
-                            errors.unified_social_credit_code = result.message;
-                            currentStep.value = 1;
-                        }
-                        if (result.message && result.message.includes('联系电话')) {
-                            errors.contact_phone = result.message;
-                            currentStep.value = 1;
-                        }
-                        if (result.message && result.message.includes('邮箱')) {
-                            errors.contact_email = result.message;
-                            currentStep.value = 1;
+                    
+                    const field = mapBackendErrorToField(result.message || '');
+                    if (field) {
+                        showFieldError(field, result.message);
+                    } else {
+                        if (result.code === 400 && result.message && result.message.includes('已通过审核')) {
+                            canEdit.value = false;
+                            globalError.value = result.message;
+                        } else {
+                            globalError.value = result.message || '提交失败，请检查输入后重试';
                         }
                     }
                     scrollToError();
@@ -354,6 +463,12 @@ createApp({
             currentStep.value = 1;
             agreed.value = false;
             globalError.value = '';
+            canEdit.value = true;
+            isEditMode.value = false;
+            editId.value = 0;
+            editStatus.value = 0;
+            pageTitle.value = '供应商资质认证';
+            pageSubtitle.value = 'KYB (Know Your Business) 企业信息注册';
             Object.keys(form).forEach(key => {
                 if (key === 'other_certificates') {
                     form[key] = [];
@@ -363,6 +478,7 @@ createApp({
             });
             Object.keys(errors).forEach(key => delete errors[key]);
             Object.keys(uploadErrors).forEach(key => delete uploadErrors[key]);
+            clearKybCache();
         }
 
         function closeFailedModal() {
@@ -373,6 +489,70 @@ createApp({
             submitFailed.value = false;
             handleSubmit();
         }
+
+        async function loadEditData(id) {
+            if (!id || id <= 0) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/detail.php?id=${id}`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    const data = result.data;
+                    isEditMode.value = true;
+                    editId.value = id;
+                    editStatus.value = data.status;
+                    pageTitle.value = '编辑供应商资质';
+                    pageSubtitle.value = `当前状态：${statusTextMap[data.status] || '未知'}`;
+                    
+                    canEdit.value = data.status != 1;
+                    
+                    Object.keys(form).forEach(key => {
+                        if (key === 'other_certificates') {
+                            form[key] = data[key] && Array.isArray(data[key]) ? [...data[key]] : [];
+                        } else if (data.hasOwnProperty(key)) {
+                            form[key] = data[key] || '';
+                        }
+                    });
+                    
+                    if (!canEdit.value) {
+                        globalError.value = '该企业已通过审核，资料不可修改。如需修改请联系客服。';
+                    }
+                } else {
+                    globalError.value = result.message || '加载编辑数据失败';
+                }
+            } catch (e) {
+                console.error('加载编辑数据失败:', e);
+                globalError.value = '加载编辑数据失败，请刷新页面重试';
+            }
+        }
+
+        function checkEditMode() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const editIdParam = urlParams.get('edit');
+                if (editIdParam) {
+                    const id = parseInt(editIdParam);
+                    if (id > 0) {
+                        loadEditData(id);
+                        return;
+                    }
+                }
+                
+                const sessionEditId = sessionStorage.getItem('editKybId');
+                if (sessionEditId) {
+                    const id = parseInt(sessionEditId);
+                    if (id > 0) {
+                        sessionStorage.removeItem('editKybId');
+                        loadEditData(id);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        onMounted(() => {
+            checkEditMode();
+        });
 
         return {
             currentStep,
@@ -388,6 +568,12 @@ createApp({
             submitFailed,
             submitFailedMessage,
             agreed,
+            isEditMode,
+            editId,
+            editStatus,
+            canEdit,
+            pageTitle,
+            pageSubtitle,
             businessLicenseInput,
             idFrontInput,
             idBackInput,

@@ -11,8 +11,15 @@
     <div id="app">
         <div class="container">
             <div class="header">
-                <h1>供应商资质认证</h1>
-                <p class="subtitle">KYB (Know Your Business) 企业信息注册</p>
+                <h1>{{ pageTitle }}</h1>
+                <p class="subtitle">{{ pageSubtitle }}</p>
+                <div v-if="isEditMode && !canEdit" class="edit-mode-banner locked">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    该企业已通过审核，资料不可修改
+                </div>
             </div>
 
             <div class="progress-bar">
@@ -47,7 +54,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>企业名称 <span class="required">*</span></label>
-                            <input type="text" v-model="form.company_name" placeholder="请输入企业全称">
+                            <input type="text" v-model="form.company_name" placeholder="请输入企业全称" :disabled="!canEdit">
                             <span v-if="errors.company_name" class="error-tip">{{ errors.company_name }}</span>
                         </div>
                     </div>
@@ -55,7 +62,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>统一社会信用代码 <span class="required">*</span></label>
-                            <input type="text" v-model="form.unified_social_credit_code" placeholder="请输入18位统一社会信用代码" maxlength="18">
+                            <input type="text" v-model="form.unified_social_credit_code" placeholder="请输入18位统一社会信用代码" maxlength="18" :disabled="!canEdit">
                             <span v-if="errors.unified_social_credit_code" class="error-tip">{{ errors.unified_social_credit_code }}</span>
                         </div>
                     </div>
@@ -63,30 +70,30 @@
                     <div class="form-row">
                         <div class="form-group half">
                             <label>法定代表人 <span class="required">*</span></label>
-                            <input type="text" v-model="form.legal_person" placeholder="请输入法定代表人姓名">
+                            <input type="text" v-model="form.legal_person" placeholder="请输入法定代表人姓名" :disabled="!canEdit">
                             <span v-if="errors.legal_person" class="error-tip">{{ errors.legal_person }}</span>
                         </div>
                         <div class="form-group half">
                             <label>法人身份证号</label>
-                            <input type="text" v-model="form.legal_person_id_card" placeholder="请输入法人身份证号" maxlength="18">
+                            <input type="text" v-model="form.legal_person_id_card" placeholder="请输入法人身份证号" maxlength="18" :disabled="!canEdit">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group half">
                             <label>注册资本</label>
-                            <input type="text" v-model="form.registered_capital" placeholder="例如：100万元人民币">
+                            <input type="text" v-model="form.registered_capital" placeholder="例如：100万元人民币" :disabled="!canEdit">
                         </div>
                         <div class="form-group half">
                             <label>成立日期</label>
-                            <input type="date" v-model="form.establish_date">
+                            <input type="date" v-model="form.establish_date" :disabled="!canEdit">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>经营范围</label>
-                            <textarea v-model="form.business_scope" rows="3" placeholder="请输入企业经营范围"></textarea>
+                            <textarea v-model="form.business_scope" rows="3" placeholder="请输入企业经营范围" :disabled="!canEdit"></textarea>
                         </div>
                     </div>
 
@@ -95,28 +102,28 @@
                     <div class="form-row">
                         <div class="form-group third">
                             <label>省份</label>
-                            <select v-model="form.registered_address_province">
+                            <select v-model="form.registered_address_province" :disabled="!canEdit">
                                 <option value="">请选择</option>
                                 <option v-for="prov in provinces" :key="prov" :value="prov">{{ prov }}</option>
                             </select>
                         </div>
                         <div class="form-group third">
                             <label>城市</label>
-                            <select v-model="form.registered_address_city">
+                            <select v-model="form.registered_address_city" :disabled="!canEdit">
                                 <option value="">请选择</option>
                                 <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
                             </select>
                         </div>
                         <div class="form-group third">
                             <label>区县</label>
-                            <input type="text" v-model="form.registered_address_district" placeholder="请输入区县">
+                            <input type="text" v-model="form.registered_address_district" placeholder="请输入区县" :disabled="!canEdit">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>详细地址</label>
-                            <input type="text" v-model="form.registered_address_detail" placeholder="请输入详细地址">
+                            <input type="text" v-model="form.registered_address_detail" placeholder="请输入详细地址" :disabled="!canEdit">
                         </div>
                     </div>
 
@@ -125,12 +132,12 @@
                     <div class="form-row">
                         <div class="form-group half">
                             <label>联系人姓名 <span class="required">*</span></label>
-                            <input type="text" v-model="form.contact_name" placeholder="请输入联系人姓名">
+                            <input type="text" v-model="form.contact_name" placeholder="请输入联系人姓名" :disabled="!canEdit">
                             <span v-if="errors.contact_name" class="error-tip">{{ errors.contact_name }}</span>
                         </div>
                         <div class="form-group half">
                             <label>联系电话 <span class="required">*</span></label>
-                            <input type="tel" v-model="form.contact_phone" placeholder="请输入联系电话" maxlength="11">
+                            <input type="tel" v-model="form.contact_phone" placeholder="请输入联系电话" maxlength="11" :disabled="!canEdit">
                             <span v-if="errors.contact_phone" class="error-tip">{{ errors.contact_phone }}</span>
                         </div>
                     </div>
@@ -138,13 +145,13 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>联系邮箱</label>
-                            <input type="email" v-model="form.contact_email" placeholder="请输入联系邮箱">
+                            <input type="email" v-model="form.contact_email" placeholder="请输入联系邮箱" :disabled="!canEdit">
                             <span v-if="errors.contact_email" class="error-tip">{{ errors.contact_email }}</span>
                         </div>
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn-next" @click="nextStep">下一步</button>
+                        <button type="button" class="btn-next" @click="nextStep" :disabled="!canEdit">下一步</button>
                     </div>
                 </div>
 
@@ -250,24 +257,24 @@
                     <div class="other-uploads">
                         <div v-for="(cert, index) in form.other_certificates" :key="index" class="other-upload-item">
                             <div class="other-upload-info">
-                                <input type="text" v-model="cert.name" placeholder="证照名称" class="cert-name-input">
+                                <input type="text" v-model="cert.name" placeholder="证照名称" class="cert-name-input" :disabled="!canEdit">
                                 <span class="cert-file-name">{{ cert.original_name || '未选择文件' }}</span>
                                 <span v-if="uploadErrors['other_' + index]" class="upload-error-tip">{{ uploadErrors['other_' + index] }}</span>
                             </div>
                             <div class="other-upload-actions">
-                                <button type="button" class="btn-sm" @click="triggerOtherUpload(index)">选择文件</button>
-                                <input type="file" class="other-cert-input" @change="handleOtherFileUpload($event, index)" accept="image/*,.pdf" style="display:none">
-                                <button type="button" class="btn-sm btn-danger" @click="removeOtherCert(index)">删除</button>
+                                <button type="button" class="btn-sm" @click="triggerOtherUpload(index)" :disabled="!canEdit">选择文件</button>
+                                <input type="file" class="other-cert-input" @change="handleOtherFileUpload($event, index)" accept="image/*,.pdf" style="display:none" :disabled="!canEdit">
+                                <button type="button" class="btn-sm btn-danger" @click="removeOtherCert(index)" :disabled="!canEdit">删除</button>
                             </div>
                         </div>
-                        <button type="button" class="btn-add-more" @click="addOtherCert">
+                        <button type="button" class="btn-add-more" @click="addOtherCert" :disabled="!canEdit">
                             <span>+</span> 添加更多证照
                         </button>
                     </div>
 
                     <div class="form-actions">
                         <button type="button" class="btn-prev" @click="prevStep">上一步</button>
-                        <button type="button" class="btn-next" @click="nextStep">下一步</button>
+                        <button type="button" class="btn-next" @click="nextStep" :disabled="!canEdit">下一步</button>
                     </div>
                 </div>
 
@@ -369,7 +376,7 @@
 
                     <div class="agreement-box">
                         <label class="checkbox-label">
-                            <input type="checkbox" v-model="agreed">
+                            <input type="checkbox" v-model="agreed" :disabled="!canEdit">
                             <span class="checkbox-custom"></span>
                             我已阅读并同意<a href="#">《供应商入驻协议》</a>和<a href="#">《信息安全保障条款》</a>
                         </label>
@@ -377,9 +384,9 @@
 
                     <div class="form-actions">
                         <button type="button" class="btn-prev" @click="prevStep">上一步</button>
-                        <button type="submit" class="btn-submit" :disabled="submitting || !agreed">
+                        <button type="submit" class="btn-submit" :disabled="submitting || !agreed || !canEdit">
                             <span v-if="submitting">提交中...</span>
-                            <span v-else>提交审核</span>
+                            <span v-else>{{ isEditMode ? '提交修改' : '提交审核' }}</span>
                         </button>
                     </div>
                 </div>
