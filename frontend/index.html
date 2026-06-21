@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商KYB注册 - 在线课程教务系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>供应商资质认证</h1>
+                <p class="subtitle">KYB (Know Your Business) 企业信息注册</p>
+            </div>
+
+            <div class="progress-bar">
+                <div class="step" :class="{ active: currentStep >= 1, completed: currentStep > 1 }">
+                    <div class="step-circle">1</div>
+                    <span>企业信息</span>
+                </div>
+                <div class="step-line" :class="{ active: currentStep > 1 }"></div>
+                <div class="step" :class="{ active: currentStep >= 2, completed: currentStep > 2 }">
+                    <div class="step-circle">2</div>
+                    <span>证照上传</span>
+                </div>
+                <div class="step-line" :class="{ active: currentStep > 2 }"></div>
+                <div class="step" :class="{ active: currentStep >= 3 }">
+                    <div class="step-circle">3</div>
+                    <span>确认提交</span>
+                </div>
+            </div>
+
+            <form @submit.prevent="handleSubmit" class="form-card">
+                <div v-show="currentStep === 1" class="form-step">
+                    <h2 class="section-title">企业基本信息</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>企业名称 <span class="required">*</span></label>
+                            <input type="text" v-model="form.company_name" placeholder="请输入企业全称">
+                            <span v-if="errors.company_name" class="error-tip">{{ errors.company_name }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>统一社会信用代码 <span class="required">*</span></label>
+                            <input type="text" v-model="form.unified_social_credit_code" placeholder="请输入18位统一社会信用代码" maxlength="18">
+                            <span v-if="errors.unified_social_credit_code" class="error-tip">{{ errors.unified_social_credit_code }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>法定代表人 <span class="required">*</span></label>
+                            <input type="text" v-model="form.legal_person" placeholder="请输入法定代表人姓名">
+                            <span v-if="errors.legal_person" class="error-tip">{{ errors.legal_person }}</span>
+                        </div>
+                        <div class="form-group half">
+                            <label>法人身份证号</label>
+                            <input type="text" v-model="form.legal_person_id_card" placeholder="请输入法人身份证号" maxlength="18">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>注册资本</label>
+                            <input type="text" v-model="form.registered_capital" placeholder="例如：100万元人民币">
+                        </div>
+                        <div class="form-group half">
+                            <label>成立日期</label>
+                            <input type="date" v-model="form.establish_date">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>经营范围</label>
+                            <textarea v-model="form.business_scope" rows="3" placeholder="请输入企业经营范围"></textarea>
+                        </div>
+                    </div>
+
+                    <h2 class="section-title">注册地址</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group third">
+                            <label>省份</label>
+                            <select v-model="form.registered_address_province">
+                                <option value="">请选择</option>
+                                <option v-for="prov in provinces" :key="prov" :value="prov">{{ prov }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group third">
+                            <label>城市</label>
+                            <select v-model="form.registered_address_city">
+                                <option value="">请选择</option>
+                                <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group third">
+                            <label>区县</label>
+                            <input type="text" v-model="form.registered_address_district" placeholder="请输入区县">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>详细地址</label>
+                            <input type="text" v-model="form.registered_address_detail" placeholder="请输入详细地址">
+                        </div>
+                    </div>
+
+                    <h2 class="section-title">联系信息</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>联系人姓名 <span class="required">*</span></label>
+                            <input type="text" v-model="form.contact_name" placeholder="请输入联系人姓名">
+                            <span v-if="errors.contact_name" class="error-tip">{{ errors.contact_name }}</span>
+                        </div>
+                        <div class="form-group half">
+                            <label>联系电话 <span class="required">*</span></label>
+                            <input type="tel" v-model="form.contact_phone" placeholder="请输入联系电话" maxlength="11">
+                            <span v-if="errors.contact_phone" class="error-tip">{{ errors.contact_phone }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>联系邮箱</label>
+                            <input type="email" v-model="form.contact_email" placeholder="请输入联系邮箱">
+                            <span v-if="errors.contact_email" class="error-tip">{{ errors.contact_email }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-next" @click="nextStep">下一步</button>
+                    </div>
+                </div>
+
+                <div v-show="currentStep === 2" class="form-step">
+                    <h2 class="section-title">资质证照上传</h2>
+                    <p class="section-desc">请上传以下资质证照，支持 JPG、PNG、PDF 格式，单个文件不超过 10MB</p>
+
+                    <div class="upload-grid">
+                        <div class="upload-item">
+                            <div class="upload-label">
+                                <span class="upload-title">营业执照 <span class="required">*</span></span>
+                                <span class="upload-desc">请上传清晰的营业执照正本</span>
+                            </div>
+                            <div class="upload-area" :class="{ 'has-file': form.business_license }" @click="triggerUpload('businessLicenseInput')">
+                                <div v-if="!form.business_license" class="upload-placeholder">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <p>点击上传</p>
+                                </div>
+                                <div v-else class="upload-preview">
+                                    <img :src="form.business_license" alt="营业执照" v-if="isImage(form.business_license)">
+                                    <div class="file-preview" v-else>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        <p>营业执照文件</p>
+                                    </div>
+                                    <button type="button" class="remove-btn" @click.stop="removeFile('business_license')">×</button>
+                                </div>
+                            </div>
+                            <input type="file" ref="businessLicenseInput" @change="handleFileUpload($event, 'business_license')" accept="image/*,.pdf" style="display:none">
+                        </div>
+
+                        <div class="upload-item">
+                            <div class="upload-label">
+                                <span class="upload-title">法人身份证正面 <span class="required">*</span></span>
+                                <span class="upload-desc">身份证人像面</span>
+                            </div>
+                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_front }" @click="triggerUpload('idFrontInput')">
+                                <div v-if="!form.legal_person_id_front" class="upload-placeholder">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <p>点击上传</p>
+                                </div>
+                                <div v-else class="upload-preview">
+                                    <img :src="form.legal_person_id_front" alt="身份证正面" v-if="isImage(form.legal_person_id_front)">
+                                    <div class="file-preview" v-else>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        <p>身份证正面</p>
+                                    </div>
+                                    <button type="button" class="remove-btn" @click.stop="removeFile('legal_person_id_front')">×</button>
+                                </div>
+                            </div>
+                            <input type="file" ref="idFrontInput" @change="handleFileUpload($event, 'legal_person_id_front')" accept="image/*,.pdf" style="display:none">
+                        </div>
+
+                        <div class="upload-item">
+                            <div class="upload-label">
+                                <span class="upload-title">法人身份证反面 <span class="required">*</span></span>
+                                <span class="upload-desc">身份证国徽面</span>
+                            </div>
+                            <div class="upload-area" :class="{ 'has-file': form.legal_person_id_back }" @click="triggerUpload('idBackInput')">
+                                <div v-if="!form.legal_person_id_back" class="upload-placeholder">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <p>点击上传</p>
+                                </div>
+                                <div v-else class="upload-preview">
+                                    <img :src="form.legal_person_id_back" alt="身份证反面" v-if="isImage(form.legal_person_id_back)">
+                                    <div class="file-preview" v-else>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        <p>身份证反面</p>
+                                    </div>
+                                    <button type="button" class="remove-btn" @click.stop="removeFile('legal_person_id_back')">×</button>
+                                </div>
+                            </div>
+                            <input type="file" ref="idBackInput" @change="handleFileUpload($event, 'legal_person_id_back')" accept="image/*,.pdf" style="display:none">
+                        </div>
+                    </div>
+
+                    <h2 class="section-title">其他证照（选填）</h2>
+                    <p class="section-desc">可上传其他资质证明文件，如：税务登记证、组织机构代码证、行业资质等</p>
+                    
+                    <div class="other-uploads">
+                        <div v-for="(cert, index) in form.other_certificates" :key="index" class="other-upload-item">
+                            <div class="other-upload-info">
+                                <input type="text" v-model="cert.name" placeholder="证照名称" class="cert-name-input">
+                                <span class="cert-file-name">{{ cert.original_name || '未选择文件' }}</span>
+                            </div>
+                            <div class="other-upload-actions">
+                                <button type="button" class="btn-sm" @click="triggerOtherUpload(index)">选择文件</button>
+                                <input type="file" :ref="'otherInput' + index" @change="handleOtherFileUpload($event, index)" accept="image/*,.pdf" style="display:none">
+                                <button type="button" class="btn-sm btn-danger" @click="removeOtherCert(index)">删除</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-add-more" @click="addOtherCert">
+                            <span>+</span> 添加更多证照
+                        </button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-prev" @click="prevStep">上一步</button>
+                        <button type="button" class="btn-next" @click="nextStep">下一步</button>
+                    </div>
+                </div>
+
+                <div v-show="currentStep === 3" class="form-step">
+                    <h2 class="section-title">确认注册信息</h2>
+                    <p class="section-desc">请仔细核对以下信息，确认无误后提交审核</p>
+
+                    <div class="review-section">
+                        <h3>企业基本信息</h3>
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <span class="review-label">企业名称</span>
+                                <span class="review-value">{{ form.company_name }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">统一社会信用代码</span>
+                                <span class="review-value">{{ form.unified_social_credit_code }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">法定代表人</span>
+                                <span class="review-value">{{ form.legal_person }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">注册资本</span>
+                                <span class="review-value">{{ form.registered_capital || '-' }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">成立日期</span>
+                                <span class="review-value">{{ form.establish_date || '-' }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">经营范围</span>
+                                <span class="review-value">{{ form.business_scope || '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-section">
+                        <h3>注册地址</h3>
+                        <div class="review-grid">
+                            <div class="review-item full-width">
+                                <span class="review-label">详细地址</span>
+                                <span class="review-value">{{ fullAddress || '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-section">
+                        <h3>联系信息</h3>
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <span class="review-label">联系人</span>
+                                <span class="review-value">{{ form.contact_name }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">联系电话</span>
+                                <span class="review-value">{{ form.contact_phone }}</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">联系邮箱</span>
+                                <span class="review-value">{{ form.contact_email || '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-section">
+                        <h3>上传证照</h3>
+                        <div class="review-files">
+                            <div class="review-file-item">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name">营业执照</span>
+                                <span :class="['file-status', form.business_license ? 'done' : 'missing']">
+                                    {{ form.business_license ? '已上传' : '未上传' }}
+                                </span>
+                            </div>
+                            <div class="review-file-item">
+                                <span class="file-icon">🪪</span>
+                                <span class="file-name">法人身份证正面</span>
+                                <span :class="['file-status', form.legal_person_id_front ? 'done' : 'missing']">
+                                    {{ form.legal_person_id_front ? '已上传' : '未上传' }}
+                                </span>
+                            </div>
+                            <div class="review-file-item">
+                                <span class="file-icon">🪪</span>
+                                <span class="file-name">法人身份证反面</span>
+                                <span :class="['file-status', form.legal_person_id_back ? 'done' : 'missing']">
+                                    {{ form.legal_person_id_back ? '已上传' : '未上传' }}
+                                </span>
+                            </div>
+                            <div v-for="(cert, index) in form.other_certificates" :key="'other-' + index" class="review-file-item">
+                                <span class="file-icon">📎</span>
+                                <span class="file-name">{{ cert.name || '其他证照' + (index + 1) }}</span>
+                                <span :class="['file-status', cert.url ? 'done' : 'missing']">
+                                    {{ cert.url ? '已上传' : '未上传' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agreement-box">
+                        <label class="checkbox-label">
+                            <input type="checkbox" v-model="agreed">
+                            <span class="checkbox-custom"></span>
+                            我已阅读并同意<a href="#">《供应商入驻协议》</a>和<a href="#">《信息安全保障条款》</a>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-prev" @click="prevStep">上一步</button>
+                        <button type="submit" class="btn-submit" :disabled="submitting || !agreed">
+                            <span v-if="submitting">提交中...</span>
+                            <span v-else>提交审核</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div v-if="submitSuccess" class="success-modal">
+                <div class="success-content">
+                    <div class="success-icon">✓</div>
+                    <h2>提交成功！</h2>
+                    <p>您的 KYB 资质认证申请已提交，我们将在 1-3 个工作日内完成审核，审核结果将通过短信通知您。</p>
+                    <button class="btn-submit" @click="resetForm">继续提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+-- 供应商KYB注册表
+CREATE TABLE IF NOT EXISTS `supplier_kyb` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `company_name` varchar(200) NOT NULL COMMENT '企业名称',
+  `unified_social_credit_code` varchar(50) NOT NULL COMMENT '统一社会信用代码',
+  `legal_person` varchar(50) NOT NULL COMMENT '法定代表人',
+  `legal_person_id_card` varchar(30) DEFAULT NULL COMMENT '法人身份证号',
+  `registered_capital` varchar(50) DEFAULT NULL COMMENT '注册资本',
+  `establish_date` date DEFAULT NULL COMMENT '成立日期',
+  `business_scope` text COMMENT '经营范围',
+  `registered_address_province` varchar(20) DEFAULT NULL COMMENT '注册地址-省',
+  `registered_address_city` varchar(20) DEFAULT NULL COMMENT '注册地址-市',
+  `registered_address_district` varchar(20) DEFAULT NULL COMMENT '注册地址-区',
+  `registered_address_detail` varchar(200) DEFAULT NULL COMMENT '注册地址-详细地址',
+  `contact_name` varchar(50) NOT NULL COMMENT '联系人姓名',
+  `contact_phone` varchar(20) NOT NULL COMMENT '联系人电话',
+  `contact_email` varchar(100) DEFAULT NULL COMMENT '联系人邮箱',
+  `business_license` varchar(255) DEFAULT NULL COMMENT '营业执照图片路径',
+  `legal_person_id_front` varchar(255) DEFAULT NULL COMMENT '法人身份证正面',
+  `legal_person_id_back` varchar(255) DEFAULT NULL COMMENT '法人身份证反面',
+  `other_certificates` text COMMENT '其他证照JSON',
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '审核状态：0待审核 1审核通过 2审核拒绝',
+  `remark` varchar(500) DEFAULT NULL COMMENT '审核备注',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unified_social_credit_code` (`unified_social_credit_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='供应商KYB注册表';
